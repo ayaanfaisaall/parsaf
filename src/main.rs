@@ -192,23 +192,6 @@ impl <'a> Parser <'a> {
         Ok(Box::new(Stmt::For { iter, start, end, block }))
     }
 
-    fn parse_block (&mut self) -> Result<Vec<Stmt>, String> {
-        let mut stmts = Vec::new();
-        while let Some(token) = self.peek() {
-            match token {
-                Token::RBrc => {
-                    self.next();
-                    break;
-                }
-                _ => {
-                    let stmt = self.parse_stmt()?;
-                    stmts.push(*stmt);
-                }
-            }
-        }
-        Ok(stmts)
-    } 
-
     fn parse_base_case (&mut self) -> Result<Box<Stmt>, String> {
         let token = self.next();
         match token {
@@ -229,6 +212,23 @@ impl <'a> Parser <'a> {
             }
         }
     }
+
+    fn parse_block (&mut self) -> Result<Vec<Stmt>, String> {
+        let mut stmts = Vec::new();
+        while let Some(token) = self.peek() {
+            match token {
+                Token::RBrc => {
+                    self.next();
+                    break;
+                }
+                _ => {
+                    let stmt = self.parse_stmt()?;
+                    stmts.push(*stmt);
+                }
+            }
+        }
+        Ok(stmts)
+    } 
    
 }
 
