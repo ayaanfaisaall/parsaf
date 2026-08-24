@@ -49,7 +49,6 @@ enum Stmt {
     Pipe {
         pipe: Vec<Stmt>,
     },
-    NotImplYet,
     Break,
     Empty,
 }
@@ -95,6 +94,20 @@ impl <'a> Parser <'a> {
         } else {
             Err(format!("parsaf: expected: {:?}, found: {:?}", expected, self.peek()))
         } 
+    }
+
+    fn unexpected (&mut self) -> Result<(), String> {
+        let token = self.peek();
+        match token {
+            Some(Token::NewLine) | Some(Token::SemiCln) |
+            Some(Token::RBrc) | Some(Token::Pipe) |
+            Some(Token::LBrc) => {
+                Ok(())
+            }
+            _ => {
+                Err(format!("parsaf: unexpected token found: {:?}", token))
+            }
+        }
     }
     
     fn parse (&mut self) -> Result<Vec<Stmt>, String> {
@@ -172,6 +185,7 @@ impl <'a> Parser <'a> {
         self.next();
         self.expect(Token::Assign)?;
         let value = self.parse_base_case()?;
+        self.unexpected()?;
         self.skip();
         return Ok(Box::new(Stmt::Let { var: name, val: value }))
     }
@@ -305,11 +319,13 @@ impl <'a> Parser <'a> {
 }
 
 fn main() {
-    let name = String::from(r#" "my name is {t}"
+    let name = String::from(r#" "my name is {t}" true
                                 true
                                 88
                                 let b = "ayaan"
-                                let a = 48
+                                let a = 48; 
+                                let a = 58
+                                echo "{a}" | tr "a-z" "A-Z"
                                 if let a = "my name is {b}" {
                                     print "{a}"
                                     print true 
