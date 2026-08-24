@@ -10,8 +10,9 @@ enum Stmt {
     // base_case: the statements which consists a value,
     //
     Word(String),
+    Num(i64),
     Str(Vec<StrIntr>),
-    ExitCode(u8),
+    ExitCode(bool),
     //
     // stmt: the statements which returns a value (ExitCode)
     // during evaluation, as well as perform an action.
@@ -77,6 +78,16 @@ impl <'a> Parser <'a> {
         next
     }
 
+    fn skip (&mut self) {
+        let to_be_skipped = self.peek();
+        match to_be_skipped {
+            Some(Token::NewLine) | Some(Token::SemiCln) => {
+                self.next();
+            }
+            _ => {} 
+        }
+    }
+
     fn expect (&mut self, expected: Token) -> Result<(),String> {
         if self.peek() == Some(&expected) {
             self.next();
@@ -84,6 +95,10 @@ impl <'a> Parser <'a> {
         } else {
             Err(format!("parsaf: expected: {:?}, found: {:?}", expected, self.peek()))
         } 
+    }
+    
+    fn is_number(str: &str) -> bool {
+        str.chars().all(|c| c.is_digit(10))
     }
 
     fn parse (&mut self) -> Result<Vec<Stmt>, String> {
@@ -101,8 +116,9 @@ impl <'a> Parser <'a> {
     fn parse_stmt (&mut self) -> Result<Box<Stmt>, String> {
         let token = self.peek();
         match token {
-            Some(Token::True) | Some(Token::False) |
-            Some(Token::Str(_)) => {
+            Some(Token::True)  | 
+            Some(Token::False) |
+            Some(Token::Str(_))  => {
                 self.parse_base_case()
             }
             Some(Token::Print) => {
@@ -120,6 +136,18 @@ impl <'a> Parser <'a> {
             Some(Token::For) => {
                 self.parse_for_stmt()
             }
+            Some(Token::LBrc) => {
+                self.next();
+                Ok(Box::new(Stmt::Block { block: self.parse_block()? }))
+            }
+            Some(Token::Break) => {
+                self.next();
+                Ok(Box::new(Stmt::Break))
+            }
+            Some(Token::NewLine) => {
+                self.next();
+                Ok(Box::new(Stmt::Empty))
+            }
             _ => {
                 self.next();
                 Ok(Box::new(Stmt::NotImplYet))
@@ -130,6 +158,7 @@ impl <'a> Parser <'a> {
     fn parse_print_stmt(&mut self) -> Result<Box<Stmt>, String> {
         self.next();
         let value = self.parse_base_case()?;
+        self.skip();
         return Ok(Box::new(Stmt::Print { val: value }))
     }
 
@@ -142,6 +171,7 @@ impl <'a> Parser <'a> {
         self.next();
         self.expect(Token::Assign)?;
         let value = self.parse_base_case()?;
+        self.skip();
         return Ok(Box::new(Stmt::Let { var: name, val: value }))
     }
     
@@ -149,6 +179,7 @@ impl <'a> Parser <'a> {
         self.next();
         let condition = self.parse_stmt()?;
         self.expect(Token::LBrc)?;
+        self.skip();
         let block = self.parse_block()?;
         let mut alternate = None;
         let token = self.peek(); 
@@ -173,6 +204,7 @@ impl <'a> Parser <'a> {
         self.next();
         let condition = self.parse_stmt()?;
         self.expect(Token::LBrc)?;
+        self.skip();
         let block = self.parse_block()?;
         Ok(Box::new(Stmt::While { cond: condition, block: block }))
     }
@@ -189,6 +221,7 @@ impl <'a> Parser <'a> {
         self.expect(Token::To)?;
         let end = self.parse_base_case()?;
         self.expect(Token::LBrc)?;
+        self.skip();
         let block = self.parse_block()?;
         Ok(Box::new(Stmt::For { iter, start, end, block }))
     }
@@ -197,16 +230,21 @@ impl <'a> Parser <'a> {
         let token = self.next();
         match token {
             Some(Token::Word(w)) => {
-                Ok(Box::new(Stmt::Word(w.clone()))) 
+                let word = w.to_string();
+                if Self::is_number(&word) {
+                    let num: i64 = word.parse().unwrap();
+                    return Ok(Box::new(Stmt::Num(num)));
+                }
+                Ok(Box::new(Stmt::Word(w.to_string()))) 
             }
             Some(Token::Str(s)) => {
                 Ok(Box::new(Stmt::Str(s.clone())))
             }
             Some(Token::True) => {
-                Ok(Box::new(Stmt::ExitCode(0)))
+                Ok(Box::new(Stmt::ExitCode(true)))
             }
             Some(Token::False) => {
-                Ok(Box::new(Stmt::ExitCode(1)))
+                Ok(Box::new(Stmt::ExitCode(false)))
             }
             _ => {
                 Err(format!("parsaf: expected base_case, found: {:?}", token))
@@ -220,6 +258,7 @@ impl <'a> Parser <'a> {
             match token {
                 Token::RBrc => {
                     self.next();
+                    self.skip();
                     break;
                 }
                 _ => {
@@ -235,7 +274,9 @@ impl <'a> Parser <'a> {
 
 fn main() {
     let name = String::from(r#" "my name is {t}"
+                                true
                                 let b = "ayaan"
+                                let a = 48
                                 if let a = "my name is {b}" {
                                     print "{a}"
                                     print true 
@@ -243,19 +284,22 @@ fn main() {
                                 } else {
                                     print false
                                 }
-                                if true {
-                                    print true
-                                } elif false {
-                                    print false
-                                } else {
-                                    print "i did it!"
+                                {
+                                    if true {
+                                        print true
+                                    } elif false {
+                                        print false
+                                    } else {
+                                        print "i did it!"
+                                    }
+                                    while true {
+                                        print this
+                                    }
+                                    for i in 1 to 10 {
+                                        print ayaan
+                                    }
                                 }
-                                while true {
-                                    print this
-                                }
-                                for i in 1 to 10 {
-                                    print ayaan
-                                }"#);
+                                "#);
     let tokens = Lexer::new(&name).tokenize();
     println!("{:?}", tokens);
 
