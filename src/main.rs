@@ -101,7 +101,8 @@ impl <'a> Parser <'a> {
     fn parse_stmt (&mut self) -> Result<Box<Stmt>, String> {
         let token = self.peek();
         match token {
-            Some(Token::True) | Some(Token::False) => {
+            Some(Token::True) | Some(Token::False) |
+            Some(Token::Str(_)) => {
                 self.parse_base_case()
             }
             Some(Token::Print) => {
@@ -150,21 +151,21 @@ impl <'a> Parser <'a> {
         self.expect(Token::LBrc)?;
         let block = self.parse_block()?;
         let mut alternate = None;
-        if let token = self.peek() {
-            match token {
-                Some(Token::Elif) => {
-                    let elif = self.parse_if_stmt()?;
-                    alternate = Some(elif);
-                }
-                Some(Token::Else) => {
-                    self.next();
-                    self.expect(Token::LBrc)?;
-                    let block = self.parse_block()?;
-                    alternate = Some(Box::new(Stmt::Block { block }));
-                }
-                _ => {}
+        let token = self.peek(); 
+        match token {
+            Some(Token::Elif) => {
+                let elif = self.parse_if_stmt()?;
+                alternate = Some(elif);
             }
+            Some(Token::Else) => {
+                self.next();
+                self.expect(Token::LBrc)?;
+                let block = self.parse_block()?;
+                alternate = Some(Box::new(Stmt::Block { block }));
+            }
+            _ => {}
         }
+        
         Ok(Box::new(Stmt::If { cond: condition, block: block, alter: alternate }))
     }
 
@@ -233,7 +234,8 @@ impl <'a> Parser <'a> {
 }
 
 fn main() {
-    let name = String::from(r#" let b = "ayaan"
+    let name = String::from(r#" "my name is {t}"
+                                let b = "ayaan"
                                 if let a = "my name is {b}" {
                                     print "{a}"
                                     print true 
