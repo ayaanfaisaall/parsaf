@@ -151,8 +151,7 @@ impl <'a> Parser <'a> {
                 Ok(Box::new(Stmt::Empty))
             }
             _ => {
-                self.next();
-                Ok(Box::new(Stmt::NotImplYet))
+                self.parse_cmd()
             }
         }
     }
@@ -228,6 +227,39 @@ impl <'a> Parser <'a> {
         Ok(Box::new(Stmt::For { iter, start, end, block }))
     }
 
+    fn parse_cmd (&mut self) -> Result<Box<Stmt>, String> {
+        let cmd = self.parse_base_case()?; 
+        let mut args = Vec::new();
+        while let Some(a) = self.peek() {
+            match a {
+                Token::NewLine | 
+                Token::SemiCln |
+                Token::RBrc     => {
+                    self.skip();
+                    break;
+                }
+                Token::Pipe => {
+                    let command = Box::new(Stmt::Cmd { cmd , args });
+                    return self.parse_pipeline(command);
+                }
+                _ => {
+                    let arg = self.parse_base_case()?;
+                    args.push(*arg);
+                }
+            }
+        }
+        Ok(Box::new(Stmt::Cmd { cmd , args }))
+    }
+
+    fn parse_pipeline (&mut self, cmd: Box<Stmt>) -> Result<Box<Stmt>, String> {
+        self.next();
+        let mut commands = Vec::new();
+        commands.push(*cmd);
+        let next_cmd = self.parse_stmt()?;
+        commands.push(*next_cmd);
+        Ok(Box::new(Stmt::Pipe { pipe: commands }))
+    }
+
     fn parse_base_case (&mut self) -> Result<Box<Stmt>, String> {
         let token = self.next();
         match token {
@@ -300,6 +332,8 @@ fn main() {
                                         print ayaan
                                     }
                                 }
+                                theme 18
+                                runitctl enable sshd | theme 28 | echo true | if let a = 38 { echo true }
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();
