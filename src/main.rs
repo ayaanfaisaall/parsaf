@@ -97,18 +97,19 @@ impl <'a> Parser <'a> {
         } 
     }
     
-    fn is_number(str: &str) -> bool {
-        str.chars().all(|c| c.is_digit(10))
-    }
-
     fn parse (&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = Vec::new();
         while let Some(token) = self.peek() {
             if token == &Token::EOF {
                 break;
-            }
+            } 
             let stmt = self.parse_stmt()?;
-            stmts.push(*stmt);
+            match *stmt {
+                Stmt::Empty => {}
+                _ => {
+                    stmts.push(*stmt);
+                }
+            }
         }
         Ok(stmts)
     }
@@ -118,7 +119,8 @@ impl <'a> Parser <'a> {
         match token {
             Some(Token::True)  | 
             Some(Token::False) |
-            Some(Token::Str(_))  => {
+            Some(Token::Str(_))|
+            Some(Token::Num(_)) => {
                 self.parse_base_case()
             }
             Some(Token::Print) => {
@@ -230,12 +232,10 @@ impl <'a> Parser <'a> {
         let token = self.next();
         match token {
             Some(Token::Word(w)) => {
-                let word = w.to_string();
-                if Self::is_number(&word) {
-                    let num: i64 = word.parse().unwrap();
-                    return Ok(Box::new(Stmt::Num(num)));
-                }
                 Ok(Box::new(Stmt::Word(w.to_string()))) 
+            }
+            Some(Token::Num(n)) => {
+                Ok(Box::new(Stmt::Num(n.clone())))
             }
             Some(Token::Str(s)) => {
                 Ok(Box::new(Stmt::Str(s.clone())))
@@ -275,6 +275,7 @@ impl <'a> Parser <'a> {
 fn main() {
     let name = String::from(r#" "my name is {t}"
                                 true
+                                88
                                 let b = "ayaan"
                                 let a = 48
                                 if let a = "my name is {b}" {
@@ -300,6 +301,7 @@ fn main() {
                                     }
                                 }
                                 "#);
+
     let tokens = Lexer::new(&name).tokenize();
     println!("{:?}", tokens);
 
