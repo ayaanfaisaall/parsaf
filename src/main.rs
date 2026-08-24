@@ -80,7 +80,8 @@ impl <'a> Parser <'a> {
     fn skip (&mut self) {
         let to_be_skipped = self.peek();
         match to_be_skipped {
-            Some(Token::NewLine) | Some(Token::SemiCln) => {
+            Some(Token::NewLine) |
+            Some(Token::SemiCln) => {
                 self.next();
             }
             _ => {} 
@@ -112,15 +113,25 @@ impl <'a> Parser <'a> {
     
     fn parse (&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = Vec::new();
-        while let Some(token) = self.peek() {
-            if token == &Token::EOF {
-                break;
-            } 
-            let stmt = self.parse_stmt()?;
-            match *stmt {
-                Stmt::Empty => {}
-                _ => {
-                    stmts.push(*stmt);
+        loop {
+            if let Some(token) = self.peek() {
+                match token {
+                    Token::EOF => {
+                        break;
+                    }
+                    _ => {
+                        let stmt = self.parse_stmt()?;
+                        match self.peek() {
+                            Some(Token::Pipe) => {
+                                self.next();
+                                let pipe = self.parse_pipeline(Some(stmt))?;
+                                stmts.push(*pipe);
+                            }
+                            _ => {
+                                stmts.push(*stmt)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -158,6 +169,10 @@ impl <'a> Parser <'a> {
             Some(Token::Break) => {
                 self.next();
                 Ok(Box::new(Stmt::Break))
+            }
+            Some(Token::Pipe) => {
+                self.next();
+                self.parse_pipeline(None)
             }
             Some(Token::NewLine) => {
                 self.next();
@@ -248,27 +263,32 @@ impl <'a> Parser <'a> {
             match a {
                 Token::NewLine | 
                 Token::SemiCln |
-                Token::RBrc     => {
+                Token::RBrc    |
+                Token::Pipe => {
                     self.skip();
                     break;
                 }
-                Token::Pipe => {
-                    let command = Box::new(Stmt::Cmd { cmd , args });
-                    return self.parse_pipeline(command);
-                }
+                // Token::Pipe => {
+                //     let command = Box::new(Stmt::Cmd { cmd , args });
+                //     return self.parse_pipeline(command);
+                // }
                 _ => {
                     let arg = self.parse_base_case()?;
                     args.push(*arg);
                 }
             }
         }
+        self.skip();
         Ok(Box::new(Stmt::Cmd { cmd , args }))
     }
 
-    fn parse_pipeline (&mut self, cmd: Box<Stmt>) -> Result<Box<Stmt>, String> {
-        self.next();
+    fn parse_pipeline (&mut self, cmd: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
+        // self.next();
         let mut commands = Vec::new();
-        commands.push(*cmd);
+        match cmd {
+            Some(c) => commands.push(*c),
+            None => {}
+        }
         let next_cmd = self.parse_stmt()?;
         commands.push(*next_cmd);
         Ok(Box::new(Stmt::Pipe { pipe: commands }))
@@ -319,10 +339,7 @@ impl <'a> Parser <'a> {
 }
 
 fn main() {
-    let name = String::from(r#" "my name is {t}" true
-                                true
-                                88
-                                let b = "ayaan"
+    let name = String::from(r#" let b = "ayaan"
                                 let a = 48; 
                                 let a = 58
                                 echo "{a}" | tr "a-z" "A-Z"
@@ -349,7 +366,7 @@ fn main() {
                                     }
                                 }
                                 theme 18
-                                runitctl enable sshd | theme 28 | echo true | if let a = 38 { echo true }
+                                runitctl enable sshd | theme 28 | true | this | go 
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();
