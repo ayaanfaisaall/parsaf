@@ -56,7 +56,13 @@ enum Stmt {
         block: Vec<Stmt>,
     },
     Pipe {
-        pipe: Vec<Stmt>,
+        stmts: Vec<Stmt>,
+    },
+    AndAnd {
+        stmts: Vec<Stmt>,
+    },
+    OrOr {
+        stmts: Vec<Stmt>,
     },
     And {
         cmd: Box<Stmt>,
@@ -117,8 +123,9 @@ impl <'a> Parser <'a> {
         let token = self.peek();
         match token {
             Some(Token::NewLine) | Some(Token::SemiCln) |
-            Some(Token::RBrc) | Some(Token::Pipe) |
-            Some(Token::LBrc) => {
+            Some(Token::RBrc) | Some(Token::Pipe)   |
+            Some(Token::LBrc) | Some(Token::AndAnd) | 
+            Some(Token::OrOr) => {
                 Ok(())
             }
             _ => {
@@ -137,19 +144,10 @@ impl <'a> Parser <'a> {
                     }
                     _ => {
                         let stmt = self.parse_stmt(0)?;
-                        match self.peek() {
-                            // Some(Token::Pipe) => {
-                            //     self.next();
-                            //     let pipe = self.parse_pipeline(Some(stmt))?;
-                            //     stmts.push(*pipe);
-                            // }
+                        match *stmt {
+                            Stmt::Empty => {}
                             _ => {
-                                match *stmt {
-                                    Stmt::Empty => {}
-                                    _ => {
-                                        stmts.push(*stmt);
-                                    }
-                                }
+                                stmts.push(*stmt);
                             }
                         }
                     }
@@ -167,7 +165,6 @@ impl <'a> Parser <'a> {
             Some(Token::False) |
             Some(Token::Str(_))|
             Some(Token::Num(_)) => {
-                // stmt = Some(self.parse_base_case()?);
                 match stmt {
                     Some(_) => {},
                     None => stmt = Some(self.parse_base_case()?),
@@ -227,18 +224,45 @@ impl <'a> Parser <'a> {
             Some(s) => s,
             None => Box::new(Stmt::Empty),
         };
+        let token = self.peek();
         if p == 0 {
-            let token = self.peek();
             match token {
                 Some(Token::Pipe) => {
                     self.next();
                     self.parse_pipeline(Some(stmt))
+                }
+                Some(Token::AndAnd) => {
+                    self.next();
+                    self.parse_andand(Some(stmt))
+                }
+                Some(Token::OrOr) => {
+                    self.next();
+                    self.parse_oror(Some(stmt))
                 }
                 _ => Ok(stmt),
             }
         } else {
             return Ok(stmt);
         }
+        // match token {
+        //     Some(Token::Pipe)   | 
+        //     Some(Token::AndAnd) |
+        //     Some(Token::OrOr) => {
+        //         if (p == 0 || p == 2 || p == 3) && token == Some(&Token::Pipe) {
+        //             self.next();
+        //             return self.parse_pipeline(Some(stmt));
+        //         } else if (p == 0 || p == 1 || p == 3) && token == Some(&Token::AndAnd) {
+        //             self.next();
+        //             return self.parse_andand(Some(stmt));
+        //         } else if (p == 0 || p == 1 || p == 2) && token == Some(&Token::OrOr) {
+        //             self.next();                
+        //             return self.parse_oror(Some(stmt));
+        //         } else {
+        //             return Ok(stmt);
+        //         }
+        //     }
+        //     _ => Ok(stmt),
+        // }
     }
 
     fn parse_print_stmt(&mut self) -> Result<Box<Stmt>, String> {
@@ -320,6 +344,8 @@ impl <'a> Parser <'a> {
             match a {
                 Token::NewLine | 
                 Token::SemiCln |
+                Token::AndAnd  |
+                Token::OrOr    | 
                 Token::RBrc    |
                 Token::LBrc    |
                 Token::Pipe => {
@@ -341,15 +367,15 @@ impl <'a> Parser <'a> {
         Ok(Box::new(Stmt::Cmd { cmd, args }))
     }
 
-    fn parse_pipeline (&mut self, cmd: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
-        let mut commands = Vec::new();
-        match cmd {
-            Some(c) => commands.push(*c),
+    fn parse_pipeline (&mut self, stmt: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
+        let mut stmts = Vec::new();
+        match stmt {
+            Some(c) => stmts.push(*c),
             None => {}
         }
         loop {
-            let next_cmd = self.parse_stmt(1)?;
-            commands.push(*next_cmd);
+            let next_stmt = self.parse_stmt(1)?;
+            stmts.push(*next_stmt);
             let token = self.peek();
             match token {
                 Some(Token::Pipe) => {
@@ -363,12 +389,102 @@ impl <'a> Parser <'a> {
                         _ => {}
                     }
                 }
+                Some(Token::AndAnd) => {
+                    self.next();
+                    let pipe = Box::new(Stmt::Pipe { stmts });
+                    return self.parse_andand(Some(pipe));
+                }
+                Some(Token::OrOr) => {
+                    self.next();
+                    let pipe = Box::new(Stmt::Pipe { stmts });
+                    return self.parse_oror(Some(pipe));
+                }
                 _ => {
                     break;
                 }
             }
         }
-        Ok(Box::new(Stmt::Pipe { pipe: commands }))
+        Ok(Box::new(Stmt::Pipe { stmts }))
+    }
+
+    fn parse_andand (&mut self, stmt: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
+        let mut stmts = Vec::new();
+        match stmt {
+            Some(c) => stmts.push(*c),
+            None => {}
+        }
+        loop {
+            let next_stmt = self.parse_stmt(1)?;
+            stmts.push(*next_stmt);
+            let token = self.peek();
+            match token {
+                Some(Token::AndAnd) => {
+                    self.next();
+                    let some = self.peek();
+                    match some {
+                        Some(Token::EOF) | Some(Token::NewLine) |
+                        Some(Token::SemiCln) | None => {
+                            return Err(format!("parsaf: expected something after '&&', found: {:?}", some));
+                        }
+                        _ => {}
+                    }
+                }
+                Some(Token::Pipe) => {
+                    self.next();
+                    let andand = Box::new(Stmt::AndAnd { stmts });
+                    return self.parse_pipeline(Some(andand));
+                }
+                Some(Token::OrOr) => {
+                    self.next();
+                    let andand = Box::new(Stmt::AndAnd { stmts });
+                    return self.parse_oror(Some(andand));
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+        Ok(Box::new(Stmt::AndAnd { stmts }))
+    }
+
+    fn parse_oror (&mut self, stmt: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
+        let mut stmts = Vec::new();
+        match stmt {
+            Some(c) => stmts.push(*c),
+            None => {}
+        }
+        loop {
+            let next_stmt = self.parse_stmt(1)?;
+            stmts.push(*next_stmt);
+            let token = self.peek();
+            match token {
+                Some(Token::OrOr) => {
+                    self.next();
+                    let some = self.peek();
+                    match some {
+                        Some(Token::EOF) | Some(Token::NewLine) |
+                        Some(Token::SemiCln) | None => {
+                            return Err(format!("parsaf: expected something after '||', found: {:?}", some));
+                        }
+                        _ => {}
+                    }
+                }
+                Some(Token::Pipe) => {
+                    self.next();
+                    let oror = Box::new(Stmt::OrOr { stmts });
+                    return self.parse_pipeline(Some(oror));
+                }
+                Some(Token::AndAnd) => {
+                    self.next();
+                    let oror = Box::new(Stmt::OrOr { stmts });
+                    return self.parse_andand(Some(oror));
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+        Ok(Box::new(Stmt::OrOr { stmts }))
     }
 
     fn parse_base_case (&mut self) -> Result<Box<Stmt>, String> {
@@ -407,19 +523,10 @@ impl <'a> Parser <'a> {
                     }
                     _ => {
                         let stmt = self.parse_stmt(0)?;
-                        match self.peek() {
-                            Some(Token::Pipe) => {
-                                self.next();
-                                let pipe = self.parse_pipeline(Some(stmt))?;
-                                stmts.push(*pipe);
-                            }
+                        match *stmt {
+                            Stmt::Empty => {}
                             _ => {
-                                match *stmt {
-                                    Stmt::Empty => {}
-                                    _ => {
-                                        stmts.push(*stmt);
-                                    }
-                                }
+                                stmts.push(*stmt);
                             }
                         }
                     }
@@ -467,8 +574,8 @@ fn main() {
                                     echo true
                                     break
                                 }
-                                || &&
                                 !38
+                                let a = 3 && echo a || test a -eq 8 && history | grep -i fd
                                    # &
                                 cmd arg1 arg2 &
                                 "#);
