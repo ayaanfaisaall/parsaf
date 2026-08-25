@@ -176,7 +176,7 @@ impl <'a> Parser <'a> {
             return Ok(stmt);
         }
     //
-    // programming without any internet!, is just failing your own logic 
+    // programming without any internet!, is just rejecting your own logic 
     // continuously, which took hours or even days to even process, until 
     // some logic is acceptable enough, an example is this:
     //
