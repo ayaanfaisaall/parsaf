@@ -190,6 +190,9 @@ impl <'a> Parser <'a> {
                 self.next();
                 Ok(Box::new(Stmt::Empty))
             }
+            Some(Token::Pipe) => {
+                Err(format!("parsaf: token: {:?} not allowed in start", token))
+            }
             Some(Token::Word(_)) => {
                 self.parse_cmd()
             }
@@ -385,7 +388,8 @@ impl <'a> Parser <'a> {
 }
 
 fn main() {
-    let name = String::from(r#" let b = "ayaan"
+    let name = String::from(r#" cmd this | cmd that | these those
+                                let b = "ayaan"
                                 let a = 48; 
                                 let a = 58
                                 echo "{a}" | tr "a-z" "A-Z"
