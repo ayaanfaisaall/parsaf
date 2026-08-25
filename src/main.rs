@@ -197,10 +197,10 @@ impl <'a> Parser <'a> {
                 self.next();
                 stmt = Some(Box::new(Stmt::Empty));
             }
-            // Some(Token::Pipe) |
-            // Some(Token::And) => {
-            //     Err(format!("parsaf: token: {:?} not allowed in start", token))
-            // }
+            Some(Token::Pipe) |
+            Some(Token::And) => {
+                return Err(format!("parsaf: token: {:?} not allowed in start", token));
+            }
             Some(Token::Bang) => {
                 self.next();
                 let number = match self.next() {
