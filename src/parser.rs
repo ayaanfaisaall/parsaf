@@ -128,7 +128,9 @@ impl <'a> Parser <'a> {
                 stmt = Some(Box::new(Stmt::Empty));
             }
             Some(Token::Pipe) |
-            Some(Token::And) => {
+            Some(Token::And)  |
+            Some(Token::OrOr) |
+            Some(Token::AndAnd) => {
                 return Err(format!("parsaf: token: {:?} not allowed in start", token));
             }
             Some(Token::Bang) => {
