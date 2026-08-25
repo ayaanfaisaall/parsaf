@@ -170,10 +170,6 @@ impl <'a> Parser <'a> {
                 self.next();
                 Ok(Box::new(Stmt::Break))
             }
-            // Some(Token::Pipe) => {
-            //     self.next();
-            //     self.parse_pipeline(None)
-            // }
             Some(Token::NewLine) => {
                 self.next();
                 Ok(Box::new(Stmt::Empty))
@@ -268,10 +264,6 @@ impl <'a> Parser <'a> {
                     self.skip();
                     break;
                 }
-                // Token::Pipe => {
-                //     let command = Box::new(Stmt::Cmd { cmd , args });
-                //     return self.parse_pipeline(command);
-                // }
                 _ => {
                     let arg = self.parse_base_case()?;
                     args.push(*arg);
@@ -283,7 +275,6 @@ impl <'a> Parser <'a> {
     }
 
     fn parse_pipeline (&mut self, cmd: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
-        // self.next();
         let mut commands = Vec::new();
         match cmd {
             Some(c) => commands.push(*c),
