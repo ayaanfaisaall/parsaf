@@ -1,3 +1,12 @@
+//
+// brah this is not a bad one actually, this parser is 
+// very powerful, i know its not optimised, it just 
+// clones the strings from the tokenizer, 
+// todo!():
+// change String to &'a str, in the tokenizer and then 
+// use the string slices all across the program, 
+// lets see if it works, 
+//
 use lexaf::{
     Lexer,
     Token,
@@ -296,7 +305,8 @@ impl <'a> Parser <'a> {
                     self.next();
                     let some = self.peek();
                     match some {
-                        Some(Token::EOF) | Some(Token::NewLine) | None => {
+                        Some(Token::EOF) | Some(Token::NewLine) |
+                        Some(Token::SemiCln) | None => {
                             return Err(format!("parsaf: expected something after '|', found: {:?}", some));
                         }
                         _ => {}
@@ -398,7 +408,7 @@ fn main() {
                                 }
                                 theme 18
                                 if let a = "{cat ~/parsaf/src/main.rs}" { echo "{a}" | echo true } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
-                                if theme 3 { echo | this }
+                                if theme 3 { echo | this } | for i in 10 to 39 { print "{a}" } | runitctl enable sshd
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();
