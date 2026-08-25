@@ -292,10 +292,17 @@ impl <'a> Parser <'a> {
         loop {
             let next_cmd = self.parse_stmt()?;
             commands.push(*next_cmd);
-            let Some(token) = self.peek();
+            let token = self.peek();
             match token {
                 Some(Token::Pipe) => {
                     self.next();
+                    let some = self.peek();
+                    match some {
+                        Some(Token::EOF) | Some(Token::NewLine) | None => {
+                            return Err(format!("parsaf: expected something after '|', found: {:?}", some));
+                        }
+                        _ => {}
+                    }
                 }
                 _ => {
                     break;
@@ -377,7 +384,7 @@ fn main() {
                                     }
                                 }
                                 theme 18
-                                runitctl enable sshd | theme 28 | true | this | go 
+                                if let a = "{cat ~/parsaf/src/main.rs}" { echo "{a}" } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();
