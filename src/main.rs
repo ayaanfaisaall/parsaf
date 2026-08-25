@@ -60,6 +60,7 @@ enum Stmt {
     },
     Break,
     Empty,
+    NotImplYet,
 }
 
 #[derive(Debug)]
@@ -189,8 +190,12 @@ impl <'a> Parser <'a> {
                 self.next();
                 Ok(Box::new(Stmt::Empty))
             }
-            _ => {
+            Some(Token::Word(_)) => {
                 self.parse_cmd()
+            }
+            _ => {
+                self.next();
+                Ok(Box::new(Stmt::NotImplYet))
             }
         }
     }
@@ -409,6 +414,12 @@ fn main() {
                                 theme 18
                                 if let a = "{cat ~/parsaf/src/main.rs}" { echo "{a}" | echo true } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
                                 if theme 3 { echo | this } | for i in 10 to 39 { print "{a}" } | runitctl enable sshd
+                                while let a = "{curl https://ayaanfaisaall.cc/downloads/cv.pdf}" {
+                                    print true
+                                    echo true
+                                    break
+                                }
+                                || &&
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();
