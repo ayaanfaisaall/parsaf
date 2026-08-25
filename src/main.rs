@@ -58,6 +58,12 @@ enum Stmt {
     Pipe {
         pipe: Vec<Stmt>,
     },
+    And {
+        cmd: Box<Stmt>,
+    },
+    Bang {
+        num: Box<Stmt>,
+    },
     Break,
     Empty,
     NotImplYet,
@@ -190,8 +196,19 @@ impl <'a> Parser <'a> {
                 self.next();
                 Ok(Box::new(Stmt::Empty))
             }
-            Some(Token::Pipe) => {
+            Some(Token::Pipe) |
+            Some(Token::And) => {
                 Err(format!("parsaf: token: {:?} not allowed in start", token))
+            }
+            Some(Token::Bang) => {
+                self.next();
+                let number = match self.next() {
+                    Some(Token::Num(n)) => {
+                        return Ok(Box::new(Stmt::Bang { num: Box::new(Stmt::Num(n.clone())) }));
+                    }
+                    _ => Err(format!("parsaf: expected number, found: {:?}", self.peek()))
+                }; 
+                number
             }
             Some(Token::Word(_)) => {
                 self.parse_cmd()
@@ -288,6 +305,11 @@ impl <'a> Parser <'a> {
                     self.skip();
                     break;
                 }
+                Token::And => {
+                    self.next();
+                    let command = Box::new(Stmt::Cmd { cmd , args });
+                    return Ok(Box::new(Stmt::And { cmd: command }))
+                }
                 _ => {
                     let arg = self.parse_base_case()?;
                     args.push(*arg);
@@ -295,7 +317,7 @@ impl <'a> Parser <'a> {
             }
         }
         self.skip();
-        Ok(Box::new(Stmt::Cmd { cmd , args }))
+        Ok(Box::new(Stmt::Cmd { cmd, args }))
     }
 
     fn parse_pipeline (&mut self, cmd: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
@@ -424,6 +446,9 @@ fn main() {
                                     break
                                 }
                                 || &&
+                                !38
+                                   # &
+                                cmd arg1 arg2 &
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();
