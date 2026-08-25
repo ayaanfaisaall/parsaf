@@ -136,7 +136,7 @@ impl <'a> Parser <'a> {
                         break;
                     }
                     _ => {
-                        let stmt = self.parse_stmt()?;
+                        let stmt = self.parse_stmt(0)?;
                         match self.peek() {
                             // Some(Token::Pipe) => {
                             //     self.next();
@@ -159,7 +159,7 @@ impl <'a> Parser <'a> {
         Ok(stmts)
     }
 
-    fn parse_stmt (&mut self) -> Result<Box<Stmt>, String> {
+    fn parse_stmt (&mut self, p: u8) -> Result<Box<Stmt>, String> {
         let token = self.peek();
         let mut stmt = None;
         match token {
@@ -167,7 +167,11 @@ impl <'a> Parser <'a> {
             Some(Token::False) |
             Some(Token::Str(_))|
             Some(Token::Num(_)) => {
-                stmt = Some(self.parse_base_case()?);
+                // stmt = Some(self.parse_base_case()?);
+                match stmt {
+                    Some(_) => {},
+                    None => stmt = Some(self.parse_base_case()?),
+                }
             }
             Some(Token::Print) => {
                 stmt = Some(self.parse_print_stmt()?);
@@ -223,15 +227,18 @@ impl <'a> Parser <'a> {
             Some(s) => s,
             None => Box::new(Stmt::Empty),
         };
-        let token = self.peek();
-        match token {
-            Some(Token::Pipe) => {
-                self.next();
-                self.parse_pipeline(Some(stmt))
+        if p == 0 {
+            let token = self.peek();
+            match token {
+                Some(Token::Pipe) => {
+                    self.next();
+                    self.parse_pipeline(Some(stmt))
+                }
+                _ => Ok(stmt),
             }
-            _ => Ok(stmt),
+        } else {
+            return Ok(stmt);
         }
-        // Ok(stmt)
     }
 
     fn parse_print_stmt(&mut self) -> Result<Box<Stmt>, String> {
@@ -257,7 +264,7 @@ impl <'a> Parser <'a> {
     
     fn parse_if_stmt (&mut self) -> Result<Box<Stmt>, String> {
         self.next();
-        let condition = self.parse_stmt()?;
+        let condition = self.parse_stmt(0)?;
         self.expect(Token::LBrc)?;
         self.skip();
         let block = self.parse_block()?;
@@ -282,7 +289,7 @@ impl <'a> Parser <'a> {
 
     fn parse_while_stmt (&mut self) -> Result<Box<Stmt>, String> {
         self.next();
-        let condition = self.parse_stmt()?;
+        let condition = self.parse_stmt(0)?;
         self.expect(Token::LBrc)?;
         self.skip();
         let block = self.parse_block()?;
@@ -341,7 +348,7 @@ impl <'a> Parser <'a> {
             None => {}
         }
         loop {
-            let next_cmd = self.parse_stmt()?;
+            let next_cmd = self.parse_stmt(1)?;
             commands.push(*next_cmd);
             let token = self.peek();
             match token {
@@ -399,7 +406,7 @@ impl <'a> Parser <'a> {
                         break;
                     }
                     _ => {
-                        let stmt = self.parse_stmt()?;
+                        let stmt = self.parse_stmt(0)?;
                         match self.peek() {
                             Some(Token::Pipe) => {
                                 self.next();
@@ -425,6 +432,7 @@ impl <'a> Parser <'a> {
 
 fn main() {
     let name = String::from(r#" cmd this | cmd that | these those
+                                8888
                                 let b = "ayaan"
                                 let a = 48; 
                                 let a = 58
