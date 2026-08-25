@@ -170,10 +170,10 @@ impl <'a> Parser <'a> {
                 self.next();
                 Ok(Box::new(Stmt::Break))
             }
-            Some(Token::Pipe) => {
-                self.next();
-                self.parse_pipeline(None)
-            }
+            // Some(Token::Pipe) => {
+            //     self.next();
+            //     self.parse_pipeline(None)
+            // }
             Some(Token::NewLine) => {
                 self.next();
                 Ok(Box::new(Stmt::Empty))
@@ -289,8 +289,19 @@ impl <'a> Parser <'a> {
             Some(c) => commands.push(*c),
             None => {}
         }
-        let next_cmd = self.parse_stmt()?;
-        commands.push(*next_cmd);
+        loop {
+            let next_cmd = self.parse_stmt()?;
+            commands.push(*next_cmd);
+            let Some(token) = self.peek();
+            match token {
+                Some(Token::Pipe) => {
+                    self.next();
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
         Ok(Box::new(Stmt::Pipe { pipe: commands }))
     }
 
