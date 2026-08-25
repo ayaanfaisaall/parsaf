@@ -128,7 +128,12 @@ impl <'a> Parser <'a> {
                                 stmts.push(*pipe);
                             }
                             _ => {
-                                stmts.push(*stmt)
+                                match *stmt {
+                                    Stmt::Empty => {}
+                                    _ => {
+                                        stmts.push(*stmt);
+                                    }
+                                }
                             }
                         }
                     }
@@ -170,7 +175,8 @@ impl <'a> Parser <'a> {
                 self.next();
                 Ok(Box::new(Stmt::Break))
             }
-            Some(Token::NewLine) => {
+            Some(Token::NewLine) |
+            Some(Token::SemiCln) => {
                 self.next();
                 Ok(Box::new(Stmt::Empty))
             }
@@ -260,6 +266,7 @@ impl <'a> Parser <'a> {
                 Token::NewLine | 
                 Token::SemiCln |
                 Token::RBrc    |
+                Token::LBrc    |
                 Token::Pipe => {
                     self.skip();
                     break;
@@ -329,22 +336,37 @@ impl <'a> Parser <'a> {
 
     fn parse_block (&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = Vec::new();
-        while let Some(token) = self.peek() {
-            match token {
-                Token::RBrc => {
-                    self.next();
-                    self.skip();
-                    break;
-                }
-                _ => {
-                    let stmt = self.parse_stmt()?;
-                    stmts.push(*stmt);
+        loop {
+            if let Some(token) = self.peek() {
+                match token {
+                    Token::RBrc => {
+                        self.next();
+                        self.skip();
+                        break;
+                    }
+                    _ => {
+                        let stmt = self.parse_stmt()?;
+                        match self.peek() {
+                            Some(Token::Pipe) => {
+                                self.next();
+                                let pipe = self.parse_pipeline(Some(stmt))?;
+                                stmts.push(*pipe);
+                            }
+                            _ => {
+                                match *stmt {
+                                    Stmt::Empty => {}
+                                    _ => {
+                                        stmts.push(*stmt);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
         Ok(stmts)
     } 
-   
 }
 
 fn main() {
@@ -375,7 +397,8 @@ fn main() {
                                     }
                                 }
                                 theme 18
-                                if let a = "{cat ~/parsaf/src/main.rs}" { echo "{a}" } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
+                                if let a = "{cat ~/parsaf/src/main.rs}" { echo "{a}" | echo true } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
+                                if theme 3 { echo | this }
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();
