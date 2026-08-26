@@ -46,6 +46,11 @@ fn main() {
                                 let a = 3 && echo a || test a -eq 8 && history | grep -i fd
                                    # &
                                 cmd arg1 arg2 &
+                                if let a = [cat ~/parsaf/src/ast.rs] {
+                                    print "{a}"
+                                } else {
+                                    print "cat failed: no file found"
+                                } 
                                 "#);
 
     let tokens = Lexer::new(&name).tokenize();

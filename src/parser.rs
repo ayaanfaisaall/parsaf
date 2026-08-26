@@ -54,7 +54,8 @@ impl <'a> Parser <'a> {
             Some(Token::NewLine) | Some(Token::SemiCln) |
             Some(Token::RBrc) | Some(Token::Pipe)   |
             Some(Token::LBrc) | Some(Token::AndAnd) | 
-            Some(Token::OrOr) => {
+            Some(Token::OrOr) | Some(Token::RSqr)   |
+            Some(Token::LSqr) => {
                 Ok(())
             }
             _ => {
@@ -118,6 +119,10 @@ impl <'a> Parser <'a> {
                 self.next();
                 stmt = Some(Box::new(Stmt::Block { block: self.parse_block()? }));
             }
+            // Some(Token::LSqr) => {
+            //     self.next();
+            //     stmt = Some(Box::new(Stmt::SqBlock { block: self.parse_sq_block()? }));
+            // }
             Some(Token::Break) => {
                 self.next();
                 stmt = Some(Box::new(Stmt::Break));
@@ -278,14 +283,9 @@ impl <'a> Parser <'a> {
         let mut args = Vec::new();
         while let Some(a) = self.peek() {
             match a {
-                Token::NewLine | 
-                Token::SemiCln |
-                Token::AndAnd  |
-                Token::OrOr    | 
-                Token::RBrc    |
-                Token::LBrc    |
-                Token::EOF     |
-                Token::Pipe => {
+                Token::NewLine | Token::SemiCln | Token::AndAnd | Token::OrOr | 
+                Token::RBrc    | Token::LBrc    | Token::RSqr   | Token::LSqr |
+                Token::EOF     | Token::Pipe => {
                     self.skip();
                     break;
                 }
@@ -442,6 +442,9 @@ impl <'a> Parser <'a> {
             Some(Token::False) => {
                 Ok(Box::new(Stmt::ExitCode(false)))
             }
+            Some(Token::LSqr) => {
+                Ok(Box::new(Stmt::SqBlock { block: self.parse_sq_block()? }))
+            }
             _ => {
                 Err(format!("parsaf: expected base_case, found: {:?}", token))
             }
@@ -472,4 +475,30 @@ impl <'a> Parser <'a> {
         }
         Ok(stmts)
     } 
+
+    fn parse_sq_block (&mut self) -> Result<Vec<Stmt>, String> {
+        let mut stmts = Vec::new();
+        loop {
+            if let Some(token) = self.peek() {
+                match token {
+                    Token::RSqr => {
+                        self.next();
+                        self.skip();
+                        break;
+                    }
+                    _ => {
+                        let stmt = self.parse_stmt(0)?;
+                        match *stmt {
+                            Stmt::Empty => {}
+                            _ => {
+                                stmts.push(*stmt);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(stmts)
+    } 
+
 }

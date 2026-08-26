@@ -53,6 +53,9 @@ pub enum Stmt {
     Block {
         block: Vec<Stmt>,
     },
+    SqBlock {
+        block: Vec<Stmt>,
+    },
     Pipe {
         stmts: Vec<Stmt>,
     },
