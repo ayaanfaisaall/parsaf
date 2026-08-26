@@ -94,7 +94,8 @@ impl <'a> Parser <'a> {
             Some(Token::True)  | 
             Some(Token::False) |
             Some(Token::Str(_))|
-            Some(Token::Num(_)) => {
+            Some(Token::Num(_))|
+            Some(Token::LSqr)=> {
                 match stmt {
                     Some(_) => {},
                     None => stmt = Some(self.parse_base_case()?),
@@ -118,10 +119,6 @@ impl <'a> Parser <'a> {
             Some(Token::LBrc) => {
                 self.next();
                 stmt = Some(Box::new(Stmt::Block { block: self.parse_block()? }));
-            }
-            Some(Token::LSqr) => {
-                self.next();
-                stmt = Some(Box::new(Stmt::SqBlock { block: self.parse_sq_block()? }));
             }
             Some(Token::Break) => {
                 self.next();
@@ -483,7 +480,6 @@ impl <'a> Parser <'a> {
                 match token {
                     Token::RSqr => {
                         self.next();
-                        self.skip();
                         break;
                     }
                     _ => {
