@@ -434,10 +434,10 @@ impl <'a> Parser <'a> {
                 Ok(Box::new(Stmt::Str(s.clone())))
             }
             Some(Token::True) => {
-                Ok(Box::new(Stmt::ExitCode(true)))
+                Ok(Box::new(Stmt::Bool(true)))
             }
             Some(Token::False) => {
-                Ok(Box::new(Stmt::ExitCode(false)))
+                Ok(Box::new(Stmt::Bool(false)))
             }
             Some(Token::LSqr) => {
                 Ok(Box::new(Stmt::SqBlock { block: self.parse_sq_block()? }))

@@ -19,7 +19,7 @@ pub enum Stmt {
     Word(String),
     Num(i64),
     Str(Vec<StrIntr>),
-    ExitCode(bool),
+    Bool(bool),
     //
     // stmt: the statements which returns a value (ExitCode)
     // during evaluation, as well as perform an action.
