@@ -472,7 +472,7 @@ impl <'a> Parser <'a> {
                 match token {
                     Token::RBrc => {
                         self.next();
-                        self.skip();
+                        // self.skip();
                         break;
                     }
                     Token::EOF => {
