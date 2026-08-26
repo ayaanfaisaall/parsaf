@@ -10,6 +10,8 @@
 //
 // the new replacement for [] is {}, allowed it in base_case and
 // hence let and also it can carry out without anything normally
+// but keep in mind to exempt [] and {} from passing to external
+// commands in the interpreter,
 //
 use lexaf::{
     Token,
