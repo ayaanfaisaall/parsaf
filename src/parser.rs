@@ -119,10 +119,10 @@ impl <'a> Parser <'a> {
                 self.next();
                 stmt = Some(Box::new(Stmt::Block { block: self.parse_block()? }));
             }
-            // Some(Token::LSqr) => {
-            //     self.next();
-            //     stmt = Some(Box::new(Stmt::SqBlock { block: self.parse_sq_block()? }));
-            // }
+            Some(Token::LSqr) => {
+                self.next();
+                stmt = Some(Box::new(Stmt::SqBlock { block: self.parse_sq_block()? }));
+            }
             Some(Token::Break) => {
                 self.next();
                 stmt = Some(Box::new(Stmt::Break));
