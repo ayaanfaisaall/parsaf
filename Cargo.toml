@@ -2,6 +2,16 @@
 name = "parsaf"
 version = "0.1.0"
 edition = "2024"
+authors = ["ayaan faisal <info@ayaanfaisaal.cc>"]
+description = "a custom parser, compatible with lexaf, for afsh"
+license = "MIT"
+repository = "https://github.com/ayaanfaisaall/parsaf"
+
+[lib]
+name = "parsaf"
+path = "src/lib.rs"
 
 [dependencies]
 lexaf = { path = "../lexaf/" }
+
+
