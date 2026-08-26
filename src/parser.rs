@@ -459,7 +459,7 @@ impl <'a> Parser <'a> {
                         break;
                     }
                     Token::EOF => {
-                        return Err(format!("parsaf: expected '}', found: {:?}", token))
+                        return Err(format!("parsaf: expected '}}', found: {:?}", token))
                     }
                     _ => {
                         let stmt = self.parse_stmt(0)?;

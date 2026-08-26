@@ -35,9 +35,9 @@ fn main() {
                                     }
                                 }
                                 theme 18
-                                if let a = "{cat ~/parsaf/src/main.rs}" { echo "{a}" | echo true } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
+                                if let a = [cat ~/parsaf/src/main.rs] { echo "{a}" | echo true } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
                                 if theme 3 { echo | this } | for i in 10 to 39 { print "{a}" } | runitctl enable sshd
-                                while let a = "{curl https://ayaanfaisaall.cc/downloads/cv.pdf}" {
+                                while let a = [curl https://ayaanfaisaall.cc/downloads/cv.pdf] {
                                     print true
                                     echo true
                                     break
@@ -46,6 +46,9 @@ fn main() {
                                 let a = 3 && echo a || test a -eq 8 && history | grep -i fd
                                    # &
                                 cmd arg1 arg2 &
+                                # this is the best use of if let: the command will carry out the moment let is evaluated in ast, if it fails 
+                                # it will not throw an error, balky let ka exit code 1 hojiay ga aur jese hi let ka exit code 1 hoga to if 
+                                # will be failed because 0 is true and 1 is false, 
                                 if let a = [cat ~/parsaf/src/ast.rs] {
                                     print "{a}"
                                 } else {
