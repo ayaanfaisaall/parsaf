@@ -1,3 +1,16 @@
+//
+// todo!():
+// in the interpreter we have to check if a cmd has an argument
+// of [], (array), if it has then we must throw an error, lists 
+// cannot be passed to external commands
+//
+// eval operator still not NotImplYet, and i have to think about
+// the replacement of let a = [cmd arg1 arg2], as [] is now used
+// for array, 
+//
+// the new replacement for [] is {}, allowed it in base_case and
+// hence let and also it can carry out without anything normally
+//
 use lexaf::{
     Token,
 };
@@ -95,6 +108,7 @@ impl <'a> Parser <'a> {
             Some(Token::False) |
             Some(Token::Str(_))|
             Some(Token::LSqr)  |
+            Some(Token::LBrc)  |
             Some(Token::Num(_)) => {
                 match stmt {
                     Some(_) => {},
@@ -116,10 +130,10 @@ impl <'a> Parser <'a> {
             Some(Token::For) => {
                 stmt = Some(self.parse_for_stmt()?);
             }
-            Some(Token::LBrc) => {
-                self.next();
-                stmt = Some(Box::new(Stmt::Block { block: self.parse_block()? }));
-            }
+            // Some(Token::LBrc) => {
+            //     self.next();
+            //     stmt = Some(Box::new(Stmt::Block { block: self.parse_block()? }));
+            // }
             Some(Token::Break) => {
                 self.next();
                 stmt = Some(Box::new(Stmt::Break));
@@ -438,6 +452,9 @@ impl <'a> Parser <'a> {
             }
             Some(Token::False) => {
                 Ok(Box::new(Stmt::Bool(false)))
+            }
+            Some(Token::LBrc) => {
+                Ok(Box::new(Stmt::Block { block: self.parse_block()? }))
             }
             Some(Token::LSqr) => {
                 return self.parse_arrays();
