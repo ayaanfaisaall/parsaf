@@ -20,6 +20,7 @@ pub enum Stmt {
     Num(i64),
     Str(Vec<StrIntr>),
     Bool(bool),
+    Array(Vec<Stmt>),
     //
     // stmt: the statements which returns a value (ExitCode)
     // during evaluation, as well as perform an action.
@@ -53,9 +54,9 @@ pub enum Stmt {
     Block {
         block: Vec<Stmt>,
     },
-    SqBlock {
-        block: Vec<Stmt>,
-    },
+    // SqBlock {
+    //     block: Vec<Stmt>,
+    // },
     Pipe {
         stmts: Vec<Stmt>,
     },

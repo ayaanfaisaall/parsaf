@@ -94,6 +94,7 @@ impl <'a> Parser <'a> {
             Some(Token::True)  | 
             Some(Token::False) |
             Some(Token::Str(_))|
+            Some(Token::LSqr)  |
             Some(Token::Num(_)) => {
                 match stmt {
                     Some(_) => {},
@@ -131,7 +132,6 @@ impl <'a> Parser <'a> {
             Some(Token::Pipe) |
             Some(Token::And)  |
             Some(Token::OrOr) |
-            Some(Token::RSqr) |
             Some(Token::AndAnd) => {
                 return Err(format!("parsaf: token: {:?} not allowed in start", token));
             }
@@ -440,7 +440,7 @@ impl <'a> Parser <'a> {
                 Ok(Box::new(Stmt::Bool(false)))
             }
             Some(Token::LSqr) => {
-                Ok(Box::new(Stmt::SqBlock { block: self.parse_sq_block()? }))
+                return self.parse_arrays();
             }
             _ => {
                 Err(format!("parsaf: expected base_case, found: {:?}", token))
@@ -476,31 +476,57 @@ impl <'a> Parser <'a> {
         Ok(stmts)
     } 
 
-    fn parse_sq_block (&mut self) -> Result<Vec<Stmt>, String> {
+    fn parse_arrays (&mut self) -> Result<Box<Stmt>, String> {
         let mut stmts = Vec::new();
         loop {
-            if let Some(token) = self.peek() {
-                match token {
-                    Token::RSqr => {
-                        self.next();
-                        break;
-                    }
-                    Token::EOF => {
-                        return Err(format!("parsaf: expected ']', found: {:?}", token))
-                    }
-                    _ => {
-                        let stmt = self.parse_stmt(0)?;
-                        match *stmt {
-                            Stmt::Empty => {}
-                            _ => {
-                                stmts.push(*stmt);
-                            }
-                        }
-                    }
+            let token = self.peek();
+            match token {
+                Some(Token::Comma) => {
+                    self.next();
+                }
+                Some(Token::RSqr) => {
+                    self.next();
+                    break;
+                }
+                Some(Token::NewLine) => {
+                    self.skip();
+                }
+                Some(Token::EOF) => {
+                    return Err(format!("parsaf: expected ']', found: {:?}", token))
+                }
+                _ => {
+                    let base_case = self.parse_base_case()?;
+                    stmts.push(*base_case);
                 }
             }
         }
-        Ok(stmts)
-    } 
+        Ok(Box::new(Stmt::Array(stmts)))
+    }
+    // fn parse_sq_block (&mut self) -> Result<Vec<Stmt>, String> {
+    //     let mut stmts = Vec::new();
+    //     loop {
+    //         if let Some(token) = self.peek() {
+    //             match token {
+    //                 Token::RSqr => {
+    //                     self.next();
+    //                     break;
+    //                 }
+    //                 Token::EOF => {
+    //                     return Err(format!("parsaf: expected ']', found: {:?}", token))
+    //                 }
+    //                 _ => {
+    //                     let stmt = self.parse_stmt(0)?;
+    //                     match *stmt {
+    //                         Stmt::Empty => {}
+    //                         _ => {
+    //                             stmts.push(*stmt);
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     Ok(stmts)
+    // } 
 
 }
