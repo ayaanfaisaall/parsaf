@@ -55,7 +55,7 @@ impl <'a> Parser <'a> {
             Some(Token::RBrc) | Some(Token::Pipe)   |
             Some(Token::LBrc) | Some(Token::AndAnd) | 
             Some(Token::OrOr) | Some(Token::RSqr)   |
-            Some(Token::LSqr) => {
+            Some(Token::LSqr) | Some(Token::EOF) => {
                 Ok(())
             }
             _ => {
