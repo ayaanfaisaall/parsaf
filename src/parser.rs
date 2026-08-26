@@ -94,8 +94,7 @@ impl <'a> Parser <'a> {
             Some(Token::True)  | 
             Some(Token::False) |
             Some(Token::Str(_))|
-            Some(Token::Num(_))|
-            Some(Token::LSqr)=> {
+            Some(Token::Num(_)) => {
                 match stmt {
                     Some(_) => {},
                     None => stmt = Some(self.parse_base_case()?),
@@ -132,6 +131,7 @@ impl <'a> Parser <'a> {
             Some(Token::Pipe) |
             Some(Token::And)  |
             Some(Token::OrOr) |
+            Some(Token::RSqr) |
             Some(Token::AndAnd) => {
                 return Err(format!("parsaf: token: {:?} not allowed in start", token));
             }
@@ -458,6 +458,9 @@ impl <'a> Parser <'a> {
                         self.skip();
                         break;
                     }
+                    Token::EOF => {
+                        return Err(format!("parsaf: expected '}', found: {:?}", token))
+                    }
                     _ => {
                         let stmt = self.parse_stmt(0)?;
                         match *stmt {
@@ -481,6 +484,9 @@ impl <'a> Parser <'a> {
                     Token::RSqr => {
                         self.next();
                         break;
+                    }
+                    Token::EOF => {
+                        return Err(format!("parsaf: expected ']', found: {:?}", token))
                     }
                     _ => {
                         let stmt = self.parse_stmt(0)?;
