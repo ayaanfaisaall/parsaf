@@ -2,10 +2,6 @@
 // brah this is not a bad one actually, this parser is 
 // very powerful, i know its not optimised, it just 
 // clones the strings from the tokenizer, 
-// todo!():
-// change String to &'a str, in the tokenizer and then 
-// use the string slices all across the program, 
-// lets see if it works, 
 //
 use lexaf::{
     StrIntr,
