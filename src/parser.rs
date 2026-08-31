@@ -132,10 +132,6 @@ impl <'a> Parser <'a> {
             Some(Token::For) => {
                 stmt = Some(self.parse_for_stmt()?);
             }
-            // Some(Token::LBrc) => {
-            //     self.next();
-            //     stmt = Some(Box::new(Stmt::Block { block: self.parse_block()? }));
-            // }
             Some(Token::Break) => {
                 self.next();
                 stmt = Some(Box::new(Stmt::Break));
@@ -474,7 +470,6 @@ impl <'a> Parser <'a> {
                 match token {
                     Token::RBrc => {
                         self.next();
-                        // self.skip();
                         break;
                     }
                     Token::EOF => {
@@ -521,31 +516,5 @@ impl <'a> Parser <'a> {
         }
         Ok(Box::new(Stmt::Array(stmts)))
     }
-    // fn parse_sq_block (&mut self) -> Result<Vec<Stmt>, String> {
-    //     let mut stmts = Vec::new();
-    //     loop {
-    //         if let Some(token) = self.peek() {
-    //             match token {
-    //                 Token::RSqr => {
-    //                     self.next();
-    //                     break;
-    //                 }
-    //                 Token::EOF => {
-    //                     return Err(format!("parsaf: expected ']', found: {:?}", token))
-    //                 }
-    //                 _ => {
-    //                     let stmt = self.parse_stmt(0)?;
-    //                     match *stmt {
-    //                         Stmt::Empty => {}
-    //                         _ => {
-    //                             stmts.push(*stmt);
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     Ok(stmts)
-    // } 
 
 }

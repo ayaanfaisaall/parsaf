@@ -37,7 +37,7 @@ fn main() {
                                 theme 18
                                 if let a = {cat ~/parsaf/src/main.rs} { echo "{a}" | echo true } | tr "a-z" "A-Z" | runitctl enable sshd | theme 3 
                                 if theme 3 { echo | this } | for i in 10 to 39 { print "{a}" } | runitctl enable sshd
-                                while let a = [curl https://ayaanfaisaall.cc/downloads/cv.pdf] {
+                                while let a = {curl https://ayaanfaisaall.cc/downloads/cv.pdf} {
                                     print true
                                     echo true
                                     break
@@ -50,9 +50,9 @@ fn main() {
                                 # it will not throw an error, balky let ka exit code 1 hojiay ga aur jese hi let ka exit code 1 hoga to if 
                                 # will be failed because 0 is true and 1 is false, 
                                 if let a = {cat ~/parsaf/src/ast.rs} {
-                                    print "{a}"
+                                    print a
                                 } else {
-                                    print "cat failed: no file found"
+                                    print "cat failed: error: {a}"
                                 } 
                                 "#);
 
