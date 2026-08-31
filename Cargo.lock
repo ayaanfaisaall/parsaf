@@ -10,7 +10,7 @@ checksum = "a011b174893c7c53643151e309fa71e705f2e07b854ae8f8fe08e16a7f23e8a5"
 
 [[package]]
 name = "parsaf"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "lexaf",
 ]
