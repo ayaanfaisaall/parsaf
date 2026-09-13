@@ -12,6 +12,6 @@ name = "parsaf"
 path = "src/lib.rs"
 
 [dependencies]
-lexaf = "0.1.3"
+lexaf = { path = "../lexaf/" }
 
 
