@@ -1,18 +1,3 @@
-//
-// todo!():
-// in the interpreter we have to check if a cmd has an argument
-// of [], (array), if it has then we must throw an error, lists 
-// cannot be passed to external commands
-//
-// eval operator still not NotImplYet, and i have to think about
-// the replacement of let a = [cmd arg1 arg2], as [] is now used
-// for array, 
-//
-// the new replacement for [] is {}, allowed it in base_case and
-// hence let and also it can carry out without anything normally
-// but keep in mind to exempt [] and {} from passing to external
-// commands in the interpreter,
-//
 use lexaf::{
     Token,
 };
@@ -20,30 +5,44 @@ use crate::ast::{
     Stmt,
 };
 
-pub struct Parser <'a> {
+/// A Recursive Descent Parser for the custom shell language.
+/// It processes a slice of `Token`s and constructs an Abstract Syntax Tree (AST).
+/// 
+/// Precedence Hierarchy (Top to Bottom):
+/// 1. Logical Operators (`&&`, `||`) -> `parse_andor`
+/// 2. Pipes (`|`) -> `parse_pipeline`
+/// 3. Statements & Commands -> `parse_stmt`
+pub struct Parser<'a> {
     tokens: &'a [Token],
     pos: usize,
 }
 
-impl <'a> Parser <'a> {
-    pub fn new (tokens: &'a [Token]) -> Self {
+impl<'a> Parser<'a> {
+    /// Creates a new Parser instance from a slice of tokens.
+    pub fn new(tokens: &'a [Token]) -> Self {
         Parser {
             tokens,
             pos: 0,
         }
     }
 
-    fn peek (&self) -> Option<&Token> {
+    /// Returns a reference to the current token without advancing the pointer.
+    fn peek(&self) -> Option<&Token> {
         self.tokens.get(self.pos)
     }
 
-    fn next (&mut self) -> Option<&Token> {
+    /// Advances the pointer and returns the current token.
+    /// Safely prevents the pointer from incrementing beyond EOF (`None`).
+    fn next(&mut self) -> Option<&Token> {
         let next = self.tokens.get(self.pos);
-        self.pos += 1;
+        if next.is_some() {
+            self.pos += 1;
+        }
         next
     }
 
-    fn skip (&mut self) {
+    /// Skips purely structural tokens like NewLines and Semicolons.
+    fn skip(&mut self) {
         let to_be_skipped = self.peek();
         match to_be_skipped {
             Some(Token::NewLine) |
@@ -54,7 +53,9 @@ impl <'a> Parser <'a> {
         }
     }
 
-    fn expect (&mut self, expected: Token) -> Result<(),String> {
+    /// Asserts that the next token matches the expected one, advancing if true.
+    /// Returns an error if the expected token is not found.
+    fn expect(&mut self, expected: Token) -> Result<(), String> {
         if self.peek() == Some(&expected) {
             self.next();
             Ok(())
@@ -63,7 +64,8 @@ impl <'a> Parser <'a> {
         } 
     }
 
-    fn unexpected (&mut self) -> Result<(), String> {
+    /// Validates that the current token is a safe boundary/terminator.
+    fn unexpected(&mut self) -> Result<(), String> {
         let token = self.peek();
         match token {
             Some(Token::NewLine) | Some(Token::SemiCln) |
@@ -79,7 +81,9 @@ impl <'a> Parser <'a> {
         }
     }
     
-    pub fn parse (&mut self) -> Result<Vec<Stmt>, String> {
+    /// Main entry point for the parser.
+    /// Loops through tokens until EOF, evaluating top-level expressions.
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = Vec::new();
         loop {
             if let Some(token) = self.peek() {
@@ -88,7 +92,8 @@ impl <'a> Parser <'a> {
                         break;
                     }
                     _ => {
-                        let stmt = self.parse_stmt(0)?;
+                        // Start evaluating from the highest precedence (And/Or)
+                        let stmt = self.parse_andor()?;
                         match *stmt {
                             Stmt::Empty => {}
                             _ => {
@@ -102,9 +107,11 @@ impl <'a> Parser <'a> {
         Ok(stmts)
     }
 
-    fn parse_stmt (&mut self, p: u8) -> Result<Box<Stmt>, String> {
+    /// Routes the evaluation to the appropriate statement type (If, While, Let, Cmd).
+    /// This represents the highest precedence (single command block) in the AST.
+    fn parse_stmt(&mut self) -> Result<Box<Stmt>, String> {
         let token = self.peek();
-        let mut stmt = None;
+        
         match token {
             Some(Token::True)  | 
             Some(Token::False) |
@@ -112,107 +119,43 @@ impl <'a> Parser <'a> {
             Some(Token::LSqr)  |
             Some(Token::LBrc)  |
             Some(Token::Num(_)) => {
-                match stmt {
-                    Some(_) => {},
-                    None => stmt = Some(self.parse_base_case()?),
-                }
+                self.parse_base_case()
             }
-            Some(Token::Print) => {
-                stmt = Some(self.parse_print_stmt()?);
-            }
-            Some(Token::Let) => {
-                stmt = Some(self.parse_let_stmt()?);
-            }
-            Some(Token::If) => {
-                stmt = Some(self.parse_if_stmt()?);
-            }
-            Some(Token::While) => {
-                stmt = Some(self.parse_while_stmt()?);
-            }
-            Some(Token::For) => {
-                stmt = Some(self.parse_for_stmt()?);
-            }
+            Some(Token::Print) => self.parse_print_stmt(),
+            Some(Token::Let) => self.parse_let_stmt(),
+            Some(Token::If) => self.parse_if_stmt(),
+            Some(Token::While) => self.parse_while_stmt(),
+            Some(Token::For) => self.parse_for_stmt(),
             Some(Token::Break) => {
                 self.next();
-                stmt = Some(Box::new(Stmt::Break));
+                Ok(Box::new(Stmt::Break))
             }
             Some(Token::NewLine) |
             Some(Token::SemiCln) => {
                 self.next();
-                stmt = Some(Box::new(Stmt::Empty));
+                Ok(Box::new(Stmt::Empty))
             }
             Some(Token::Pipe) |
             Some(Token::And)  |
             Some(Token::OrOr) |
             Some(Token::AndAnd) => {
-                return Err(format!("parsaf: token: {:?} not allowed in start", token));
+                Err(format!("parsaf: token: {:?} not allowed in start", token))
             }
             Some(Token::Bang) => {
                 self.next();
-                let number = match self.next() {
+                match self.next() {
                     Some(Token::Num(n)) => {
-                        return Ok(Box::new(Stmt::Bang { num: Box::new(Stmt::Num(n.clone())) }));
+                        Ok(Box::new(Stmt::Bang { num: Box::new(Stmt::Num(n.clone())) }))
                     }
                     _ => Err(format!("parsaf: expected number, found: {:?}", self.peek()))
-                }; 
-                stmt = number?
+                }
             }
-            Some(Token::Word(_)) => {
-                stmt = Some(self.parse_cmd()?);
-            }
+            Some(Token::Word(_)) => self.parse_cmd(),
             _ => {
                 self.next();
-                stmt = Some(Box::new(Stmt::NotImplYet));
+                Ok(Box::new(Stmt::NotImplYet))
             }
         }
-        let stmt = match stmt {
-            Some(s) => s,
-            None => Box::new(Stmt::Empty),
-        };
-        let token = self.peek();
-        if p == 0 {
-            match token {
-                Some(Token::Pipe) => {
-                    self.next();
-                    self.parse_pipeline(Some(stmt))
-                }
-                Some(Token::AndAnd) => {
-                    self.next();
-                    self.parse_andand(Some(stmt))
-                }
-                Some(Token::OrOr) => {
-                    self.next();
-                    self.parse_oror(Some(stmt))
-                }
-                _ => Ok(stmt),
-            }
-        } else {
-            return Ok(stmt);
-        }
-    //
-    // programming without any internet!, is just rejecting your own logic 
-    // continuously, which took hours or even days to even process, until 
-    // some logic is acceptable enough, an example is this:
-    //
-        // match token {
-        //     Some(Token::Pipe)   | 
-        //     Some(Token::AndAnd) |
-        //     Some(Token::OrOr) => {
-        //         if (p == 0 || p == 2 || p == 3) && token == Some(&Token::Pipe) {
-        //             self.next();
-        //             return self.parse_pipeline(Some(stmt));
-        //         } else if (p == 0 || p == 1 || p == 3) && token == Some(&Token::AndAnd) {
-        //             self.next();
-        //             return self.parse_andand(Some(stmt));
-        //         } else if (p == 0 || p == 1 || p == 2) && token == Some(&Token::OrOr) {
-        //             self.next();                
-        //             return self.parse_oror(Some(stmt));
-        //         } else {
-        //             return Ok(stmt);
-        //         }
-        //     }
-        //     _ => Ok(stmt),
-        // }
     }
 
     fn parse_print_stmt(&mut self) -> Result<Box<Stmt>, String> {
@@ -222,7 +165,7 @@ impl <'a> Parser <'a> {
         return Ok(Box::new(Stmt::Print { val: value }))
     }
 
-    fn parse_let_stmt (&mut self) -> Result<Box<Stmt>, String> {
+    fn parse_let_stmt(&mut self) -> Result<Box<Stmt>, String> {
         self.next();
         let name = match self.peek() {
             Some(Token::Word(w)) => w.to_string(),
@@ -236,14 +179,17 @@ impl <'a> Parser <'a> {
         return Ok(Box::new(Stmt::Let { var: name, val: value }))
     }
     
-    fn parse_if_stmt (&mut self) -> Result<Box<Stmt>, String> {
+    /// Parses an `if` statement.
+    /// Evaluates the condition using `parse_andor` to support logical operators inside conditions.
+    fn parse_if_stmt(&mut self) -> Result<Box<Stmt>, String> {
         self.next();
-        let condition = self.parse_stmt(0)?;
+        let condition = self.parse_andor()?;
         self.expect(Token::LBrc)?;
         self.skip();
         let block = self.parse_block()?;
         let mut alternate = None;
         let token = self.peek(); 
+        
         match token {
             Some(Token::Elif) => {
                 let elif = self.parse_if_stmt()?;
@@ -261,16 +207,16 @@ impl <'a> Parser <'a> {
         Ok(Box::new(Stmt::If { cond: condition, block: block, alter: alternate }))
     }
 
-    fn parse_while_stmt (&mut self) -> Result<Box<Stmt>, String> {
+    fn parse_while_stmt(&mut self) -> Result<Box<Stmt>, String> {
         self.next();
-        let condition = self.parse_stmt(0)?;
+        let condition = self.parse_andor()?;
         self.expect(Token::LBrc)?;
         self.skip();
         let block = self.parse_block()?;
         Ok(Box::new(Stmt::While { cond: condition, block: block }))
     }
 
-    fn parse_for_stmt (&mut self) -> Result<Box<Stmt>, String> {
+    fn parse_for_stmt(&mut self) -> Result<Box<Stmt>, String> {
         self.next();
         let iter = match self.peek() {
             Some(Token::Word(w)) => w.to_string(),
@@ -287,7 +233,9 @@ impl <'a> Parser <'a> {
         Ok(Box::new(Stmt::For { iter, start, end, block }))
     }
 
-    fn parse_cmd (&mut self) -> Result<Box<Stmt>, String> {
+    /// Parses a standard shell command and its arguments.
+    /// Handles background operators `&` and stops at safe delimiters.
+    fn parse_cmd(&mut self) -> Result<Box<Stmt>, String> {
         let cmd = self.parse_base_case()?; 
         let mut args = Vec::new();
         while let Some(a) = self.peek() {
@@ -313,180 +261,84 @@ impl <'a> Parser <'a> {
         Ok(Box::new(Stmt::Cmd { cmd, args }))
     }
 
-    fn parse_pipeline (&mut self) -> Result<Box<Stmt>, String> {
-        let stmt = self.parse_stmt(1)?;
-        if !self.peek() == Some(Token::Pipe) {
+    /// Parses pipelines (`a | b`).
+    /// Precedence Level: Middle (Evaluated after And/Or, before single Stmt).
+    /// Safely avoids allocating a Vec/Pipe node if only one command is found.
+    fn parse_pipeline(&mut self) -> Result<Box<Stmt>, String> {
+        let stmt = self.parse_stmt()?;
+        
+        // If there's no pipe, just return the single statement safely (0 unwraps, 0 panics)
+        if !matches!(self.peek(), Some(Token::Pipe)) {
             return Ok(stmt);
-        } else {
-            loop {
-                let stmts = vec![*stmt];
-                match self.peek() {
-                    Some(Token::Pipe) => {
-                        self.next();
-                        self.skip();
-                        let stmt = self.parse_stmt(1)?;
-                        stmts.push(*stmt);
-                    }
-                    _ => {
-                        break;
-                    }
-                }
-            }
-            return Ok(Stmt::Pipe { stmts });
         }
+        
+        let mut stmts = vec![*stmt];
+        while let Some(Token::Pipe) = self.peek() {
+            self.next();
+            stmts.push(*self.parse_stmt()?);
+        }
+        Ok(Box::new(Stmt::Pipe { stmts }))
     } 
 
-    // fn parse_pipeline (&mut self, stmt: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
-    //     let mut stmts = Vec::new();
-    //     match stmt {
-    //         Some(c) => stmts.push(*c),
-    //         None => {}
-    //     }
-    //     loop {
-    //         let next_stmt = self.parse_stmt(1)?;
-    //         stmts.push(*next_stmt);
-    //         let token = self.peek();
-    //         match token {
-    //             Some(Token::Pipe) => {
-    //                 self.next();
-    //                 let some = self.peek();
-    //                 match some {
-    //                     Some(Token::EOF) | Some(Token::NewLine) |
-    //                     Some(Token::SemiCln) | None => {
-    //                         return Err(format!("parsaf: expected something after '|', found: {:?}", some));
-    //                     }
-    //                     _ => {}
-    //                 }
-    //             }
-    //             Some(Token::AndAnd) => {
-    //                 self.next();
-    //                 let pipe = Box::new(Stmt::Pipe { stmts });
-    //                 return self.parse_andand(Some(pipe));
-    //             }
-    //             Some(Token::OrOr) => {
-    //                 self.next();
-    //                 let pipe = Box::new(Stmt::Pipe { stmts });
-    //                 return self.parse_oror(Some(pipe));
-    //             }
-    //             _ => {
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //     Ok(Box::new(Stmt::Pipe { stmts }))
-    // }
-
-    fn parse_andand (&mut self, stmt: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
-        let mut stmts = Vec::new();
-        match stmt {
-            Some(c) => stmts.push(*c),
-            None => {}
-        }
+    /// Parses logical `&&` and `||` operations.
+    /// Precedence Level: Lowest (Top of the AST chain).
+    /// Uses inner loops to flatten multiple consecutive operators of the same type 
+    /// (e.g., `a && b && c`) into a single node array, avoiding deep nested recursion trees.
+    fn parse_andor(&mut self) -> Result<Box<Stmt>, String> {
+        let mut stmt = self.parse_pipeline()?;
+        
         loop {
-            let next_stmt = self.parse_stmt(1)?;
-            stmts.push(*next_stmt);
-            let token = self.peek();
-            match token {
+            match self.peek() {
                 Some(Token::AndAnd) => {
-                    self.next();
-                    let some = self.peek();
-                    match some {
-                        Some(Token::EOF) | Some(Token::NewLine) |
-                        Some(Token::SemiCln) | None => {
-                            return Err(format!("parsaf: expected something after '&&', found: {:?}", some));
-                        }
-                        _ => {}
+                    self.next(); 
+                    let mut stmts = vec![*stmt];
+                    stmts.push(*self.parse_pipeline()?);
+                    
+                    // Keep consuming && to keep the AST array completely flat
+                    while let Some(Token::AndAnd) = self.peek() {
+                        self.next();
+                        stmts.push(*self.parse_pipeline()?);
                     }
-                }
-                Some(Token::Pipe) => {
-                    self.next();
-                    let andand = Box::new(Stmt::AndAnd { stmts });
-                    return self.parse_pipeline(Some(andand));
+                    stmt = Box::new(Stmt::AndAnd { stmts });
                 }
                 Some(Token::OrOr) => {
-                    self.next();
-                    let andand = Box::new(Stmt::AndAnd { stmts });
-                    return self.parse_oror(Some(andand));
+                    self.next(); 
+                    let mut stmts = vec![*stmt];
+                    stmts.push(*self.parse_pipeline()?);
+                    
+                    // Keep consuming || to keep the AST array completely flat
+                    while let Some(Token::OrOr) = self.peek() {
+                        self.next(); 
+                        stmts.push(*self.parse_pipeline()?);
+                    }
+                    stmt = Box::new(Stmt::OrOr { stmts });
                 }
                 _ => {
                     break;
                 }
             }
         }
-        Ok(Box::new(Stmt::AndAnd { stmts }))
+        Ok(stmt)
     }
 
-    fn parse_oror (&mut self, stmt: Option<Box<Stmt>>) -> Result<Box<Stmt>, String> {
-        let mut stmts = Vec::new();
-        match stmt {
-            Some(c) => stmts.push(*c),
-            None => {}
-        }
-        loop {
-            let next_stmt = self.parse_stmt(1)?;
-            stmts.push(*next_stmt);
-            let token = self.peek();
-            match token {
-                Some(Token::OrOr) => {
-                    self.next();
-                    let some = self.peek();
-                    match some {
-                        Some(Token::EOF) | Some(Token::NewLine) |
-                        Some(Token::SemiCln) | None => {
-                            return Err(format!("parsaf: expected something after '||', found: {:?}", some));
-                        }
-                        _ => {}
-                    }
-                }
-                Some(Token::Pipe) => {
-                    self.next();
-                    let oror = Box::new(Stmt::OrOr { stmts });
-                    return self.parse_pipeline(Some(oror));
-                }
-                Some(Token::AndAnd) => {
-                    self.next();
-                    let oror = Box::new(Stmt::OrOr { stmts });
-                    return self.parse_andand(Some(oror));
-                }
-                _ => {
-                    break;
-                }
-            }
-        }
-        Ok(Box::new(Stmt::OrOr { stmts }))
-    }
-
-    fn parse_base_case (&mut self) -> Result<Box<Stmt>, String> {
+    /// Evaluates base primitives like literals, variables, sub-blocks, and arrays.
+    fn parse_base_case(&mut self) -> Result<Box<Stmt>, String> {
         let token = self.next();
         match token {
-            Some(Token::Word(w)) => {
-                Ok(Box::new(Stmt::Word(w.to_string()))) 
-            }
-            Some(Token::Num(n)) => {
-                Ok(Box::new(Stmt::Num(n.clone())))
-            }
-            Some(Token::Str(s)) => {
-                Ok(Box::new(Stmt::Str(s.clone())))
-            }
-            Some(Token::True) => {
-                Ok(Box::new(Stmt::Bool(true)))
-            }
-            Some(Token::False) => {
-                Ok(Box::new(Stmt::Bool(false)))
-            }
-            Some(Token::LBrc) => {
-                Ok(Box::new(Stmt::Block { block: self.parse_block()? }))
-            }
-            Some(Token::LSqr) => {
-                return self.parse_arrays();
-            }
-            _ => {
-                Err(format!("parsaf: expected base_case, found: {:?}", token))
-            }
+            Some(Token::Word(w)) => Ok(Box::new(Stmt::Word(w.to_string()))),
+            Some(Token::Num(n)) => Ok(Box::new(Stmt::Num(n.clone()))),
+            Some(Token::Str(s)) => Ok(Box::new(Stmt::Str(s.clone()))),
+            Some(Token::True) => Ok(Box::new(Stmt::Bool(true))),
+            Some(Token::False) => Ok(Box::new(Stmt::Bool(false))),
+            Some(Token::LBrc) => Ok(Box::new(Stmt::Block { block: self.parse_block()? })),
+            Some(Token::LSqr) => return self.parse_arrays(),
+            _ => Err(format!("parsaf: expected base_case, found: {:?}", token))
         }
     }
 
-    fn parse_block (&mut self) -> Result<Vec<Stmt>, String> {
+    /// Parses a block of statements enclosed in `{ }`.
+    /// Re-enters the parser via `parse_andor` to allow full expressions inside blocks.
+    fn parse_block(&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = Vec::new();
         loop {
             if let Some(token) = self.peek() {
@@ -499,12 +351,11 @@ impl <'a> Parser <'a> {
                         return Err(format!("parsaf: expected '}}', found: {:?}", token))
                     }
                     _ => {
-                        let stmt = self.parse_stmt(0)?;
+                        // Re-enter top-level evaluation for statements inside the block
+                        let stmt = self.parse_andor()?;
                         match *stmt {
                             Stmt::Empty => {}
-                            _ => {
-                                stmts.push(*stmt);
-                            }
+                            _ => stmts.push(*stmt),
                         }
                     }
                 }
@@ -513,7 +364,8 @@ impl <'a> Parser <'a> {
         Ok(stmts)
     } 
 
-    fn parse_arrays (&mut self) -> Result<Box<Stmt>, String> {
+    /// Parses a comma or space-separated array enclosed in `[ ]`.
+    fn parse_arrays(&mut self) -> Result<Box<Stmt>, String> {
         let mut stmts = Vec::new();
         loop {
             let token = self.peek();
@@ -539,5 +391,4 @@ impl <'a> Parser <'a> {
         }
         Ok(Box::new(Stmt::Array(stmts)))
     }
-
 }

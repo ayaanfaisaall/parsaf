@@ -1,26 +1,14 @@
-//
-// brah this is not a bad one actually, this parser is 
-// very powerful, i know its not optimised, it just 
-// clones the strings from the tokenizer, 
-//
 use lexaf::{
     StrIntr,
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
-    //
-    // base_case: the statements which consists a value,
-    //
     Word(String),
     Num(i64),
     Str(Vec<StrIntr>),
     Bool(bool),
     Array(Vec<Stmt>),
-    //
-    // stmt: the statements which returns a value (ExitCode)
-    // during evaluation, as well as perform an action.
-    //
     Cmd {
         cmd: Box<Stmt>,
         args: Vec<Stmt>,
@@ -50,9 +38,6 @@ pub enum Stmt {
     Block {
         block: Vec<Stmt>,
     },
-    // SqBlock {
-    //     block: Vec<Stmt>,
-    // },
     Pipe {
         stmts: Vec<Stmt>,
     },
