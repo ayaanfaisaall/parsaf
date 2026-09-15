@@ -1,6 +1,6 @@
 [package]
 name = "parsaf"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 authors = ["ayaan faisal <info@ayaanfaisaal.cc>"]
 description = "a custom parser, compatible with lexaf, for afsh"
