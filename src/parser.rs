@@ -73,11 +73,14 @@ impl<'a> Parser<'a> {
                 Ok(())
             }
             Some(_) => {
-                let st = self.span_peek().unwrap();
-                Err(ParsafError::UnexpectedToken {
-                    token: st.token.clone(),
-                    span: (st.span.start..st.span.end).into(),
-                })
+                if let Some(st) = self.span_peek() {
+                    Err(ParsafError::UnexpectedToken {
+                        token: st.token.clone(),
+                        span: (st.span.start..st.span.end).into(),
+                    })
+                } else {
+                    Err(ParsafError::UnexpectedEof)
+                }
             }
             None => Err(ParsafError::UnexpectedEof),
         }
@@ -128,11 +131,14 @@ impl<'a> Parser<'a> {
             }
             Some(Token::Pipe) | Some(Token::And)  |
             Some(Token::OrOr) | Some(Token::AndAnd) => {
-                let st = self.span_peek().unwrap();
-                Err(ParsafError::NotAllowedHere {
-                    token: st.token.clone(),
-                    span: (st.span.start..st.span.end).into(),
-                })
+                if let Some(st) = self.span_peek() {
+                    Err(ParsafError::NotAllowedHere {
+                        token: st.token.clone(),
+                        span: (st.span.start..st.span.end).into(),
+                    })
+                } else {
+                    Err(ParsafError::UnexpectedEof)
+                }
             }
             Some(Token::Bang) => {
                 self.next();
@@ -350,12 +356,15 @@ impl<'a> Parser<'a> {
                         break;
                     }
                     Token::EOF => {
-                        let st = self.span_peek().unwrap();
-                        return Err(ParsafError::ExpectedFound {
-                            expected: "}".to_string(),
-                            found: st.token.clone(),
-                            span: (st.span.start..st.span.end).into(),
-                        });
+                        if let Some(st) = self.span_peek() {
+                            return Err(ParsafError::ExpectedFound {
+                                expected: "}".to_string(),
+                                found: st.token.clone(),
+                                span: (st.span.start..st.span.end).into(),
+                            });
+                        } else {
+                            return Err(ParsafError::UnexpectedEof);
+                        }
                     }
                     _ => {
                         let stmt = self.parse_andor()?;
@@ -384,12 +393,15 @@ impl<'a> Parser<'a> {
                 }
                 Some(Token::NewLine) => { self.skip(); }
                 Some(Token::EOF) => {
-                    let st = self.span_peek().unwrap();
-                    return Err(ParsafError::ExpectedFound {
-                        expected: "]".to_string(),
-                        found: st.token.clone(),
-                        span: (st.span.start..st.span.end).into(),
-                    });
+                    if let Some(st) = self.span_peek() {
+                        return Err(ParsafError::ExpectedFound {
+                            expected: "]".to_string(),
+                            found: st.token.clone(),
+                            span: (st.span.start..st.span.end).into(),
+                        });
+                    } else {
+                        return Err(ParsafError::UnexpectedEof);
+                    }
                 }
                 None => { return Err(ParsafError::UnexpectedEof); }
                 _ => {

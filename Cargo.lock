@@ -175,9 +175,9 @@ checksum = "7655c9839580ee829dfacba1d1278c2b7883e50a277ff7541299489d6bdfdc45"
 
 [[package]]
 name = "lexaf"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61ad604d381c02de863108c19148dad159390a28b93bcae639a14a8b864bb51c"
+checksum = "5fd6d145d7da1b4cfd191bbbe8e093a6268b1fdd0f3e13f1e2574fac322b42cc"
 
 [[package]]
 name = "libc"

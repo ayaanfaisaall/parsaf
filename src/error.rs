@@ -6,7 +6,7 @@ use lexaf::Token;
 pub enum ParsafError {
     #[error("token not allowed here")]
     #[diagnostic(
-        code(parsaf::not_allowed),
+        code(afsh::parsaf::not_allowed),
         help("remove '{token}' or provide a valid expression before it")
     )]
     NotAllowedHere {
@@ -17,7 +17,7 @@ pub enum ParsafError {
 
     #[error("unexpected token found")]
     #[diagnostic(
-        code(parsaf::unexpected_token),
+        code(afsh::parsaf::unexpected_token),
         help("remove '{token}' and add the correct one.")
     )]
     UnexpectedToken {
@@ -28,7 +28,7 @@ pub enum ParsafError {
 
     #[error("expected: '{expected}'")]
     #[diagnostic(
-        code(parsaf::expected_found),
+        code(afsh::parsaf::expected_found),
         help("try adding: '{expected}' here.")
     )]
     ExpectedFound {
@@ -40,7 +40,7 @@ pub enum ParsafError {
 
     #[error("unexpected EOF")]
     #[diagnostic(
-        code(parsaf::unexpected_eof),
+        code(afsh::parsaf::unexpected_eof),
         help("you might be missing a closing brace '}}' or bracket ']'?")
     )]
     UnexpectedEof,
