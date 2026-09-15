@@ -5,7 +5,7 @@ use lexaf::{
 use crate::ast::{
     Stmt,
 };
-use crate::error::ParsafError; // <-- Naya error import kiya
+use crate::error::ParsafError;
 
 /// A Recursive Descent Parser for the custom shell language.
 /// It processes a slice of `SpannedToken`s and constructs an Abstract Syntax Tree (AST).
@@ -52,7 +52,7 @@ impl<'a> Parser<'a> {
         } else {
             if let Some(st) = self.span_peek() {
                 Err(ParsafError::ExpectedFound {
-                    expected: format!("{:?}", expected),
+                    expected: expected.to_string(),
                     found: st.token.clone(),
                     span: (st.span.start..st.span.end).into(),
                 })
@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
                     match &st.token {
                         Token::Num(n) => Ok(Box::new(Stmt::Bang { num: Box::new(Stmt::Num(n.clone())) })),
                         _ => Err(ParsafError::ExpectedFound {
-                            expected: "Number".to_string(),
+                            expected: "a number".to_string(),
                             found: st.token.clone(),
                             span: (st.span.start..st.span.end).into(),
                         })
@@ -171,7 +171,7 @@ impl<'a> Parser<'a> {
             Some(st) => match &st.token {
                 Token::Word(w) => w.to_string(),
                 _ => return Err(ParsafError::ExpectedFound {
-                    expected: "Variable Name".to_string(),
+                    expected: "a var name".to_string(),
                     found: st.token.clone(),
                     span: (st.span.start..st.span.end).into(),
                 })
@@ -227,7 +227,7 @@ impl<'a> Parser<'a> {
             Some(st) => match &st.token {
                 Token::Word(w) => w.to_string(),
                 _ => return Err(ParsafError::ExpectedFound {
-                    expected: "Iterator Name".to_string(),
+                    expected: "an iterator".to_string(),
                     found: st.token.clone(),
                     span: (st.span.start..st.span.end).into(),
                 })
