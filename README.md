@@ -33,15 +33,20 @@ use parsaf::{
 
 fn main() {
     let input = String::from(r#"let a = [1, 2, 3]; if true { print a }"#);
-    
     let mut lexer = Lexer::new(&input);
-    let tokens = lexer.tokenize();
-    
-    let mut parser = Parser::new(&tokens);
-    match parser.parse() {
-        Ok(ast) => println!("{:#?}", ast),
+    match lexer.tokenize() {
+        Ok(tokens) => {
+            let mut parser = Parser::new(&tokens);
+            match parser.parse() {
+                Ok(ast) => println!("{:#?}", ast),
+                Err(e) => {
+                    let error = Report::new(e).with_source_code(input.to_string());
+                    println!("{:?}", error);
+                }
+            }
+        }
         Err(e) => {
-            let error = Report::new(e).with_source_code(input);
+            let error = Report::new(e).with_source_code(input.to_string());
             println!("{:?}", error);
         }
     }
@@ -101,15 +106,13 @@ fn main() {
 `parsaf` uses `miette` for presenting the errors. A sample output is:
 
 ```rust
-afsh::parsaf::expected_found
+afsh::parsaf::unclosed_delimiter
 
-  × expected: '='
+  × unclosed delimiter: ']'
    ╭────
- 1 │ let name "ayaan"
-   ·          ───┬───
-   ·             ╰── expected '=' here
+ 1 │ let a = [1, 2, 3
    ╰────
-  help: try adding: '=' here.
+  help: close: ']' properly
 ```
 
 ## Challenges
