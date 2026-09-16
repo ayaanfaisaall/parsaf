@@ -56,7 +56,7 @@ fn main() {
                                 if let a = {cat ~/parsaf/src/ast.rs} {
                                     print a
                                 } else {
-                                    print "cat failed: error: {a}"
+                                    print "cat failed: error: file might not be present"
                                 } 
                                 "#);
     let mut lexer = Lexer::new(&name);
