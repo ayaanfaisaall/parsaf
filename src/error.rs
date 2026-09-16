@@ -11,25 +11,36 @@ pub enum ParsafError {
     )]
     NotAllowedHere {
         token: Token,
-        #[label("'{token}' cannot be placed at the start of a statement.")]
+        #[label("'{token}' cannot be placed at the start of a statement")]
         span: SourceSpan,
     },
 
     #[error("unexpected token found")]
     #[diagnostic(
         code(afsh::parsaf::unexpected_token),
-        help("remove '{token}' and add the correct one.")
+        help("remove '{token}' and add the correct one")
     )]
     UnexpectedToken {
         token: Token,
-        #[label("'{token}' is unexpected here.")]
+        #[label("'{token}' is unexpected here")]
         span: SourceSpan,
     },
 
-    #[error("expected: '{expected}'")]
+    #[error("unclosed delimiter: '{delimiter}'")]
+    #[diagnostic(
+        code(afsh::parsaf::unclosed_delimiter),
+        help("close: '{delimiter}' properly")
+    )]
+    UnclosedDelimiter {
+        delimiter: String,
+        #[label("'{delimiter}' might not be closed properly")]
+        span: SourceSpan,
+    },
+
+    #[error("missing: '{expected}'")]
     #[diagnostic(
         code(afsh::parsaf::expected_found),
-        help("try adding: '{expected}' here.")
+        help("try adding: '{expected}' here")
     )]
     ExpectedFound {
         expected: String,

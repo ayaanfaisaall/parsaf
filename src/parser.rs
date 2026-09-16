@@ -357,9 +357,8 @@ impl<'a> Parser<'a> {
                     }
                     Token::EOF => {
                         if let Some(st) = self.span_peek() {
-                            return Err(ParsafError::ExpectedFound {
-                                expected: "}".to_string(),
-                                found: st.token.clone(),
+                            return Err(ParsafError::UnclosedDelimiter {
+                                delimiter: "}".to_string(),
                                 span: (st.span.start..st.span.end).into(),
                             });
                         } else {
@@ -394,9 +393,8 @@ impl<'a> Parser<'a> {
                 Some(Token::NewLine) => { self.skip(); }
                 Some(Token::EOF) => {
                     if let Some(st) = self.span_peek() {
-                        return Err(ParsafError::ExpectedFound {
-                            expected: "]".to_string(),
-                            found: st.token.clone(),
+                        return Err(ParsafError::UnclosedDelimiter {
+                            delimiter: "]".to_string(),
                             span: (st.span.start..st.span.end).into(),
                         });
                     } else {
