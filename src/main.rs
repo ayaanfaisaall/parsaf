@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use miette::Report;
 use::lexaf::{
     Lexer,
 };
@@ -58,11 +59,23 @@ fn main() {
                                     print "cat failed: error: {a}"
                                 } 
                                 "#);
+    let mut lexer = Lexer::new(&name);
+    match lexer.tokenize() {
+        Ok(tokens) => {
+            let mut parser = Parser::new(&tokens);
+            match parser.parse() {
+                Ok(ast) => println!("{:#?}", ast),
+                Err(e) => {
+                    let error = Report::new(e).with_source_code(name.to_string());
+                    println!("{:?}", error);
+                }
+            }
+        }
+        Err(e) => {
+            let error = Report::new(e).with_source_code(name.to_string());
+            println!("{:?}", error);
+        }
+    }
 
-    let tokens = Lexer::new(&name).tokenize();
-    println!("{:?}", tokens);
-
-    let ast = Parser::new(&tokens).parse();
-    println!("{:#?}", ast);
 }
 

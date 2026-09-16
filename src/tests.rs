@@ -10,7 +10,7 @@ mod tests {
     #[test]
     fn test_variable_declaration() {
         let input = "let n1 = 43\n";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -28,7 +28,7 @@ mod tests {
     #[test]
     fn test_simple_command_with_args() {
         let input = "git add .";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_pipeline_execution() {
         let input = "cat ~/Downloads/abc/dc.jpg | grep abc";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn test_for_loop_with_to() {
         let input = "for i in 0 to 10 { break }";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn test_while_loop_with_booleans() {
         let input = "while true { break } while false { }";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_if_elif_else_flow() {
         let input = "if true { print \"yes\" } elif false { print \"no\" } else { print \"maybe\" }";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn test_logical_and_or_chaining() {
         let input = "cmd1 && cmd2 || cmd3";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn test_background_operator_and_bang() {
         let input = "!38 && server start &";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn test_block_assignment_in_if_let() {
         let input = "if let a = { cat main.rs } { print a }";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn test_and_or_and_pipes_together() {
         let input = "let a = 3 && print a || test \"{a}\" -eq 8 && history | grep -i fd";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
@@ -275,7 +275,6 @@ mod tests {
                                     args: vec![
                                         Stmt::Str(vec![
                                             StrIntr::Variable(String::from("a")),
-                                            StrIntr::Literal(String::from("{}")),
                                         ]),
                                         Stmt::Word(String::from("-eq")),
                                         Stmt::Num(8),
@@ -307,7 +306,7 @@ mod tests {
     #[test]
     fn test_arrays() {
         let input = "[1, 2, 3]";
-        let tokens = Lexer::new(input).tokenize();
+        let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
