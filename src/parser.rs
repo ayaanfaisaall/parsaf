@@ -129,8 +129,9 @@ impl<'a> Parser<'a> {
                 self.next();
                 Ok(Box::new(Stmt::Empty))
             }
-            Some(Token::Pipe) | Some(Token::And)  |
-            Some(Token::OrOr) | Some(Token::AndAnd) => {
+            Some(Token::Pipe) | Some(Token::And)   |
+            Some(Token::OrOr) | Some(Token::AndAnd)|
+            Some(Token::RSqr) | Some(Token::RBrc) => {
                 if let Some(st) = self.span_peek() {
                     Err(ParsafError::NotAllowedHere {
                         token: st.token.clone(),
@@ -167,6 +168,7 @@ impl<'a> Parser<'a> {
     fn parse_print_stmt(&mut self) -> Result<Box<Stmt>, ParsafError> {
         self.next();
         let value = self.parse_base_case()?;
+        self.unexpected()?;
         self.skip();
         return Ok(Box::new(Stmt::Print { val: value }))
     }
@@ -336,7 +338,7 @@ impl<'a> Parser<'a> {
                 Token::False => Ok(Box::new(Stmt::Bool(false))),
                 Token::LBrc => Ok(Box::new(Stmt::Block { block: self.parse_block()? })),
                 Token::LSqr => self.parse_arrays(),
-                _ => Err(ParsafError::UnexpectedToken {
+                _ => Err(ParsafError::BaseCase {
                     token: st.token.clone(),
                     span: (st.span.start..st.span.end).into(),
                 })
@@ -354,6 +356,16 @@ impl<'a> Parser<'a> {
                     Token::RBrc => {
                         self.next();
                         break;
+                    }
+                    Token::RSqr => {
+                        if let Some(st) = self.span_peek() {
+                            return Err(ParsafError::UnexpectedToken {
+                                token: st.token.clone(),
+                                span: (st.span.start..st.span.end).into(),
+                            });
+                        } else {
+                            return Err(ParsafError::UnexpectedEof);
+                        }
                     }
                     Token::EOF => {
                         if let Some(st) = self.span_peek() {
@@ -391,6 +403,16 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 Some(Token::NewLine) => { self.skip(); }
+                Some(Token::RBrc) => {
+                    if let Some(st) = self.span_peek() {
+                        return Err(ParsafError::UnexpectedToken {
+                            token: st.token.clone(),
+                            span: (st.span.start..st.span.end).into(),
+                        });
+                    } else {
+                        return Err(ParsafError::UnexpectedEof);
+                    }
+                }
                 Some(Token::EOF) => {
                     if let Some(st) = self.span_peek() {
                         return Err(ParsafError::UnclosedDelimiter {

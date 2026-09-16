@@ -18,7 +18,18 @@ pub enum ParsafError {
     #[error("unexpected token found")]
     #[diagnostic(
         code(afsh::parsaf::unexpected_token),
-        help("remove '{token}' and add the correct one")
+        help("use one of 'datatypes', or try using: \"\" or {{}}")
+    )]
+    BaseCase {
+        token: Token,
+        #[label("'{token}' is unexpected here")]
+        span: SourceSpan,
+    },
+
+    #[error("unexpected token found")]
+    #[diagnostic(
+        code(afsh::parsaf::unexpected_token),
+        help("remove '{token}' and add the correct token")
     )]
     UnexpectedToken {
         token: Token,
