@@ -10,24 +10,24 @@ use crate::error::ParsafError;
 /// A Recursive Descent Parser for the custom shell language.
 /// It processes a slice of `SpannedToken`s and constructs an Abstract Syntax Tree (AST).
 pub struct Parser<'a> {
-    tokens: &'a [SpannedToken],
+    tokens: &'a [SpannedToken<'a>],
     pos: usize,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a [SpannedToken]) -> Self {
+    pub fn new(tokens: &'a [SpannedToken<'a>]) -> Self {
         Parser { tokens, pos: 0 }
     }
 
-    fn span_peek(&self) -> Option<&SpannedToken> {
+    fn span_peek(&self) -> Option<&'a SpannedToken<'a>> {
         self.tokens.get(self.pos)
     }
 
-    fn peek(&self) -> Option<&Token> {
+    fn peek(&self) -> Option<&'a Token<'a>> {
         self.span_peek().map(|st| &st.token)
     }
 
-    fn next(&mut self) -> Option<&SpannedToken> {
+    fn next(&mut self) -> Option<&'a SpannedToken<'a>> {
         let next = self.tokens.get(self.pos);
         if next.is_some() {
             self.pos += 1;
@@ -45,7 +45,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn expect(&mut self, expected: Token) -> Result<(), ParsafError> {
+    // Notice: ParsafError no longer has <'a>
+    fn expect(&mut self, expected: Token<'a>) -> Result<(), ParsafError> {
         if self.peek() == Some(&expected) {
             self.next();
             Ok(())
@@ -53,7 +54,7 @@ impl<'a> Parser<'a> {
             if let Some(st) = self.span_peek() {
                 Err(ParsafError::ExpectedFound {
                     expected: expected.to_string(),
-                    found: st.token.clone(),
+                    found: st.token.to_string(), // .to_string() creates owned String
                     span: (st.span.start..st.span.end).into(),
                 })
             } else {
@@ -75,7 +76,7 @@ impl<'a> Parser<'a> {
             Some(_) => {
                 if let Some(st) = self.span_peek() {
                     Err(ParsafError::UnexpectedToken {
-                        token: st.token.clone(),
+                        token: st.token.to_string(),
                         span: (st.span.start..st.span.end).into(),
                     })
                 } else {
@@ -86,7 +87,7 @@ impl<'a> Parser<'a> {
         }
     }
     
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParsafError> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt<'a>>, ParsafError> {
         let mut stmts = Vec::new();
         loop {
             if let Some(token) = self.peek() {
@@ -107,7 +108,7 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     }
 
-    fn parse_stmt(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         let token = self.peek();
         
         match token {
@@ -134,7 +135,7 @@ impl<'a> Parser<'a> {
             Some(Token::RSqr) | Some(Token::RBrc) => {
                 if let Some(st) = self.span_peek() {
                     Err(ParsafError::NotAllowedHere {
-                        token: st.token.clone(),
+                        token: st.token.to_string(),
                         span: (st.span.start..st.span.end).into(),
                     })
                 } else {
@@ -145,10 +146,10 @@ impl<'a> Parser<'a> {
                 self.next();
                 if let Some(st) = self.next() {
                     match &st.token {
-                        Token::Num(n) => Ok(Box::new(Stmt::Bang { num: Box::new(Stmt::Num(n.clone())) })),
+                        Token::Num(n) => Ok(Box::new(Stmt::Bang { num: Box::new(Stmt::Num(*n)) })),
                         _ => Err(ParsafError::ExpectedFound {
                             expected: "a number".to_string(),
-                            found: st.token.clone(),
+                            found: st.token.to_string(),
                             span: (st.span.start..st.span.end).into(),
                         })
                     }
@@ -165,7 +166,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_print_stmt(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_print_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         self.next();
         let value = self.parse_base_case()?;
         self.unexpected()?;
@@ -173,14 +174,14 @@ impl<'a> Parser<'a> {
         return Ok(Box::new(Stmt::Print { val: value }))
     }
 
-    fn parse_let_stmt(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_let_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         self.next();
         let name = match self.span_peek() {
             Some(st) => match &st.token {
-                Token::Word(w) => w.to_string(),
+                Token::Word(w) => *w,
                 _ => return Err(ParsafError::ExpectedFound {
                     expected: "a var name".to_string(),
-                    found: st.token.clone(),
+                    found: st.token.to_string(),
                     span: (st.span.start..st.span.end).into(),
                 })
             },
@@ -194,7 +195,7 @@ impl<'a> Parser<'a> {
         return Ok(Box::new(Stmt::Let { var: name, val: value }))
     }
     
-    fn parse_if_stmt(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_if_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         self.next();
         let condition = self.parse_andor()?;
         self.expect(Token::LBrc)?;
@@ -220,7 +221,7 @@ impl<'a> Parser<'a> {
         Ok(Box::new(Stmt::If { cond: condition, block: block, alter: alternate }))
     }
 
-    fn parse_while_stmt(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_while_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         self.next();
         let condition = self.parse_andor()?;
         self.expect(Token::LBrc)?;
@@ -229,14 +230,14 @@ impl<'a> Parser<'a> {
         Ok(Box::new(Stmt::While { cond: condition, block: block }))
     }
 
-    fn parse_for_stmt(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_for_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         self.next();
         let iter = match self.span_peek() {
             Some(st) => match &st.token {
-                Token::Word(w) => w.to_string(),
+                Token::Word(w) => *w,
                 _ => return Err(ParsafError::ExpectedFound {
                     expected: "an iterator".to_string(),
-                    found: st.token.clone(),
+                    found: st.token.to_string(),
                     span: (st.span.start..st.span.end).into(),
                 })
             },
@@ -253,7 +254,7 @@ impl<'a> Parser<'a> {
         Ok(Box::new(Stmt::For { iter, start, end, block }))
     }
 
-    fn parse_cmd(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_cmd(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         let cmd = self.parse_base_case()?; 
         let mut args = Vec::new();
         while let Some(a) = self.peek() {
@@ -279,7 +280,7 @@ impl<'a> Parser<'a> {
         Ok(Box::new(Stmt::Cmd { cmd, args }))
     }
 
-    fn parse_pipeline(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_pipeline(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         let stmt = self.parse_stmt()?;
         
         if !matches!(self.peek(), Some(Token::Pipe)) {
@@ -294,7 +295,7 @@ impl<'a> Parser<'a> {
         Ok(Box::new(Stmt::Pipe { stmts }))
     } 
 
-    fn parse_andor(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_andor(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         let mut stmt = self.parse_pipeline()?;
         
         loop {
@@ -327,19 +328,19 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    fn parse_base_case(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_base_case(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         let spanned = self.next();
         if let Some(st) = spanned {
             match &st.token {
-                Token::Word(w) => Ok(Box::new(Stmt::Word(w.to_string()))),
-                Token::Num(n) => Ok(Box::new(Stmt::Num(n.clone()))),
-                Token::Str(s) => Ok(Box::new(Stmt::Str(s.clone()))),
+                Token::Word(w) => Ok(Box::new(Stmt::Word(*w))),
+                Token::Num(n) => Ok(Box::new(Stmt::Num(*n))),
+                Token::Str(s) => Ok(Box::new(Stmt::Str(s))),
                 Token::True => Ok(Box::new(Stmt::Bool(true))),
                 Token::False => Ok(Box::new(Stmt::Bool(false))),
                 Token::LBrc => Ok(Box::new(Stmt::Block { block: self.parse_block()? })),
                 Token::LSqr => self.parse_arrays(),
                 _ => Err(ParsafError::BaseCase {
-                    token: st.token.clone(),
+                    token: st.token.to_string(),
                     span: (st.span.start..st.span.end).into(),
                 })
             }
@@ -348,7 +349,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_block(&mut self) -> Result<Vec<Stmt>, ParsafError> {
+    fn parse_block(&mut self) -> Result<Vec<Stmt<'a>>, ParsafError> {
         let mut stmts = Vec::new();
         loop {
             if let Some(token) = self.peek() {
@@ -360,7 +361,7 @@ impl<'a> Parser<'a> {
                     Token::RSqr => {
                         if let Some(st) = self.span_peek() {
                             return Err(ParsafError::UnexpectedToken {
-                                token: st.token.clone(),
+                                token: st.token.to_string(),
                                 span: (st.span.start..st.span.end).into(),
                             });
                         } else {
@@ -392,7 +393,7 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     } 
 
-    fn parse_arrays(&mut self) -> Result<Box<Stmt>, ParsafError> {
+    fn parse_arrays(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
         let mut stmts = Vec::new();
         loop {
             let token = self.peek();
@@ -406,7 +407,7 @@ impl<'a> Parser<'a> {
                 Some(Token::RBrc) => {
                     if let Some(st) = self.span_peek() {
                         return Err(ParsafError::UnexpectedToken {
-                            token: st.token.clone(),
+                            token: st.token.to_string(),
                             span: (st.span.start..st.span.end).into(),
                         });
                     } else {

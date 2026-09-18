@@ -117,7 +117,7 @@ afsh::parsaf::unclosed_delimiter
 
 ## Challenges
 
-Just like `lexaf`, `parsaf` was written entirely offline. I was in my homeland AJK, where the government had disabled all internet access due to public protests. I had no connection to the outside world, no StackOverflow, and only a little bit of offline documentation.
+Just like `lexaf`, `parsaf (0.1.1)` was written entirely offline. I was in my homeland AJK, where the government had disabled all internet access due to public protests. I had no connection to the outside world, no StackOverflow, and only a little bit of offline documentation.
 
 Programming a recursive descent parser without any internet is essentially just rejecting your own logic continuously. It takes hours or even days to process an idea until the logic is finally acceptable enough to work. For example, figuring out how to handle the recursive precedence of `|`, `&&`, and `||` without an external reference led me down a massive rabbit hole of trial, error, and heavily commented-out brute-force logic before arriving at the current implementation. 
 

@@ -1,6 +1,5 @@
 use miette::{Diagnostic, SourceSpan};
 use thiserror::Error;
-use lexaf::Token;
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum ParsafError {
@@ -10,7 +9,7 @@ pub enum ParsafError {
         help("remove '{token}' or provide a valid expression before it")
     )]
     NotAllowedHere {
-        token: Token,
+        token: String,
         #[label("'{token}' cannot be placed at the start of a statement")]
         span: SourceSpan,
     },
@@ -21,7 +20,7 @@ pub enum ParsafError {
         help("use one of 'datatypes', or try using: \"\" or {{}}")
     )]
     BaseCase {
-        token: Token,
+        token: String,
         #[label("'{token}' is unexpected here")]
         span: SourceSpan,
     },
@@ -32,7 +31,7 @@ pub enum ParsafError {
         help("remove '{token}' and add the correct token")
     )]
     UnexpectedToken {
-        token: Token,
+        token: String,
         #[label("'{token}' is unexpected here")]
         span: SourceSpan,
     },
@@ -55,7 +54,7 @@ pub enum ParsafError {
     )]
     ExpectedFound {
         expected: String,
-        found: Token,
+        found: String,
         #[label("expected '{expected}' here")]
         span: SourceSpan,
     },

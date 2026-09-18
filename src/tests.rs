@@ -18,7 +18,7 @@ mod tests {
             ast,
             vec![
                 Stmt::Let {
-                    var: String::from("n1"),
+                    var: "n1",
                     val: Box::new(Stmt::Num(43)),
                 }
             ]
@@ -36,10 +36,10 @@ mod tests {
             ast,
             vec![
                 Stmt::Cmd {
-                    cmd: Box::new(Stmt::Word(String::from("git"))),
+                    cmd: Box::new(Stmt::Word("git")),
                     args: vec![
-                        Stmt::Word(String::from("add")),
-                        Stmt::Word(String::from(".")),
+                        Stmt::Word("add"),
+                        Stmt::Word("."),
                     ],
                 }
             ]
@@ -59,12 +59,12 @@ mod tests {
                 Stmt::Pipe {
                     stmts: vec![
                         Stmt::Cmd {
-                            cmd: Box::new(Stmt::Word(String::from("cat"))),
-                            args: vec![Stmt::Word(String::from("~/Downloads/abc/dc.jpg"))],
+                            cmd: Box::new(Stmt::Word("cat")),
+                            args: vec![Stmt::Word("~/Downloads/abc/dc.jpg")],
                         },
                         Stmt::Cmd {
-                            cmd: Box::new(Stmt::Word(String::from("grep"))),
-                            args: vec![Stmt::Word(String::from("abc"))],
+                            cmd: Box::new(Stmt::Word("grep")),
+                            args: vec![Stmt::Word("abc")],
                         }
                     ],
                 }
@@ -83,7 +83,7 @@ mod tests {
             ast,
             vec![
                 Stmt::For {
-                    iter: String::from("i"),
+                    iter: "i",
                     start: Box::new(Stmt::Num(0)),
                     end: Box::new(Stmt::Num(10)),
                     block: vec![Stmt::Break],
@@ -128,20 +128,20 @@ mod tests {
                     cond: Box::new(Stmt::Bool(true)),
                     block: vec![
                         Stmt::Print {
-                            val: Box::new(Stmt::Str(vec![StrIntr::Literal(String::from("yes"))])),
+                            val: Box::new(Stmt::Str(&vec![StrIntr::Literal("yes")])),
                         }
                     ],
                     alter: Some(Box::new(Stmt::If {
                         cond: Box::new(Stmt::Bool(false)),
                         block: vec![
                             Stmt::Print {
-                                val: Box::new(Stmt::Str(vec![StrIntr::Literal(String::from("no"))])),
+                                val: Box::new(Stmt::Str(&vec![StrIntr::Literal("no")])),
                             }
                         ],
                         alter: Some(Box::new(Stmt::Block {
                             block: vec![
                                 Stmt::Print {
-                                    val: Box::new(Stmt::Str(vec![StrIntr::Literal(String::from("maybe"))])),
+                                    val: Box::new(Stmt::Str(&vec![StrIntr::Literal("maybe")])),
                                 }
                             ]
                         })),
@@ -166,17 +166,17 @@ mod tests {
                         Stmt::AndAnd {
                             stmts: vec![
                                 Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word(String::from("cmd1"))),
+                                    cmd: Box::new(Stmt::Word("cmd1")),
                                     args: vec![],
                                 },
                                 Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word(String::from("cmd2"))),
+                                    cmd: Box::new(Stmt::Word("cmd2")),
                                     args: vec![],
                                 }
                             ]
                         },
                         Stmt::Cmd {
-                            cmd: Box::new(Stmt::Word(String::from("cmd3"))),
+                            cmd: Box::new(Stmt::Word("cmd3")),
                             args: vec![],
                         }
                     ]
@@ -202,8 +202,8 @@ mod tests {
                         },
                         Stmt::And {
                             cmd: Box::new(Stmt::Cmd {
-                                cmd: Box::new(Stmt::Word(String::from("server"))),
-                                args: vec![Stmt::Word(String::from("start"))],
+                                cmd: Box::new(Stmt::Word("server")),
+                                args: vec![Stmt::Word("start")],
                             }),
                         }
                     ]
@@ -224,19 +224,19 @@ mod tests {
             vec![
                 Stmt::If {
                     cond: Box::new(Stmt::Let {
-                        var: String::from("a"),
+                        var: "a",
                         val: Box::new(Stmt::Block {
                             block: vec![
                                 Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word(String::from("cat"))),
-                                    args: vec![Stmt::Word(String::from("main.rs"))],
+                                    cmd: Box::new(Stmt::Word("cat")),
+                                    args: vec![Stmt::Word("main.rs")],
                                 }
                             ]
                         })
                     }),
                     block: vec![
                         Stmt::Print {
-                            val: Box::new(Stmt::Word(String::from("a"))),
+                            val: Box::new(Stmt::Word("a")),
                         }
                     ],
                     alter: None,
@@ -262,21 +262,21 @@ mod tests {
                                 Stmt::AndAnd {
                                     stmts: vec![
                                         Stmt::Let {
-                                            var: String::from("a"),
+                                            var: "a",
                                             val: Box::new(Stmt::Num(3)),
                                         },
                                         Stmt::Print {
-                                            val: Box::new(Stmt::Word(String::from("a"))),
+                                            val: Box::new(Stmt::Word("a")),
                                         },
                                     ],
                                 },
                                 Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word(String::from("test"))),
+                                    cmd: Box::new(Stmt::Word("test")),
                                     args: vec![
-                                        Stmt::Str(vec![
-                                            StrIntr::Variable(String::from("a")),
+                                        Stmt::Str(&vec![
+                                            StrIntr::Variable("a"),
                                         ]),
-                                        Stmt::Word(String::from("-eq")),
+                                        Stmt::Word("-eq"),
                                         Stmt::Num(8),
                                     ],
                                 },
@@ -285,14 +285,14 @@ mod tests {
                         Stmt::Pipe {
                             stmts: vec![
                                 Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word(String::from("history"))),
+                                    cmd: Box::new(Stmt::Word("history")),
                                     args: vec![],
                                 },
                                 Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word(String::from("grep"))),
+                                    cmd: Box::new(Stmt::Word("grep")),
                                     args: vec![
-                                        Stmt::Word(String::from("-i")),
-                                        Stmt::Word(String::from("fd")),
+                                        Stmt::Word("-i"),
+                                        Stmt::Word("fd"),
                                     ],
                                 },
                             ],

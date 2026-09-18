@@ -3,58 +3,57 @@ use lexaf::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Stmt {
-    Word(String),
+pub enum Stmt<'a> {
+    Word(&'a str),
     Num(i64),
-    Str(Vec<StrIntr>),
+    Str(&'a Vec<StrIntr<'a>>),
     Bool(bool),
-    Array(Vec<Stmt>),
+    Array(Vec<Stmt<'a>>),
     Cmd {
-        cmd: Box<Stmt>,
-        args: Vec<Stmt>,
+        cmd: Box<Stmt<'a>>,
+        args: Vec<Stmt<'a>>,
     },
     Let {
-        var: String,
-        val: Box<Stmt>,
+        var: &'a str,
+        val: Box<Stmt<'a>>,
     }, 
     Print {
-        val: Box<Stmt>,
+        val: Box<Stmt<'a>>,
     },
     If {
-        cond: Box<Stmt>,
-        block: Vec<Stmt>,
-        alter: Option<Box<Stmt>>, 
+        cond: Box<Stmt<'a>>,
+        block: Vec<Stmt<'a>>,
+        alter: Option<Box<Stmt<'a>>>, 
     },
     For {
-        iter: String,
-        start: Box<Stmt>,
-        end: Box<Stmt>,
-        block: Vec<Stmt>,
+        iter: &'a str,
+        start: Box<Stmt<'a>>,
+        end: Box<Stmt<'a>>,
+        block: Vec<Stmt<'a>>,
     },
     While {
-        cond: Box<Stmt>,
-        block: Vec<Stmt>,
+        cond: Box<Stmt<'a>>,
+        block: Vec<Stmt<'a>>,
     },
     Block {
-        block: Vec<Stmt>,
+        block: Vec<Stmt<'a>>,
     },
     Pipe {
-        stmts: Vec<Stmt>,
+        stmts: Vec<Stmt<'a>>,
     },
     AndAnd {
-        stmts: Vec<Stmt>,
+        stmts: Vec<Stmt<'a>>,
     },
     OrOr {
-        stmts: Vec<Stmt>,
+        stmts: Vec<Stmt<'a>>,
     },
     And {
-        cmd: Box<Stmt>,
+        cmd: Box<Stmt<'a>>,
     },
     Bang {
-        num: Box<Stmt>,
+        num: Box<Stmt<'a>>,
     },
     Break,
     Empty,
     NotImplYet,
 }
-
