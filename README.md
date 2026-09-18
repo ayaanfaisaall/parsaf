@@ -1,6 +1,6 @@
 # parsaf
 
-A recursive descent parser and Abstract Syntax Tree (AST) generator for `afsh` (a shell).
+A recursive descent, zero-copy parser and Abstract Syntax Tree (AST) generator for `afsh` (a shell).
 
 While `lexaf` acts as the "dumb but fast" tokenizer categorizing raw text, `parsaf` is where the shell actually starts to understand the grammar. It takes the flat sequence of tokens produced by `lexaf` and structures them into a logical AST (Abstract Syntax Tree) made up of `Stmt` (Statement) nodes, ready for the interpreter to evaluate.
 
