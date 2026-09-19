@@ -3,6 +3,14 @@ use lexaf::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum RdrctOp {
+    In,
+    Out,
+    Err,
+    Both,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt<'a> {
     Word(&'a str),
     Num(i64),
@@ -38,6 +46,12 @@ pub enum Stmt<'a> {
     },
     Block {
         block: Vec<Stmt<'a>>,
+    },
+    Rdrct {
+        op: RdrctOp,
+        append: bool,
+        stmt: Box<Stmt<'a>>,
+        target: Box<Stmt<'a>>,
     },
     Pipe {
         stmts: Vec<Stmt<'a>>,

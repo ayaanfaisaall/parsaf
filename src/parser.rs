@@ -4,6 +4,7 @@ use lexaf::{
 };
 use crate::ast::{
     Stmt,
+    RdrctOp,
 };
 use crate::error::ParsafError;
 
@@ -45,7 +46,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // Notice: ParsafError no longer has <'a>
     fn expect(&mut self, expected: Token<'a>) -> Result<(), ParsafError> {
         if self.peek() == Some(&expected) {
             self.next();
@@ -54,7 +54,7 @@ impl<'a> Parser<'a> {
             if let Some(st) = self.span_peek() {
                 Err(ParsafError::ExpectedFound {
                     expected: expected.to_string(),
-                    found: st.token.to_string(), // .to_string() creates owned String
+                    found: st.token.to_string(),
                     span: (st.span.start..st.span.end).into(),
                 })
             } else {
@@ -262,7 +262,9 @@ impl<'a> Parser<'a> {
             match a {
                 Token::NewLine | Token::SemiCln | Token::AndAnd | Token::OrOr | 
                 Token::RBrc    | Token::LBrc    | Token::RSqr   | Token::LSqr |
-                Token::EOF     | Token::Pipe => {
+                Token::EOF     | Token::Pipe    | Token::RdrctOut | Token::RdrctErr |
+                Token::RdrctBoth | Token::AppendOut | Token::AppendErr | Token::AppendBoth | 
+                Token::RdrctIn => {
                     self.skip();
                     break;
                 }
@@ -281,8 +283,53 @@ impl<'a> Parser<'a> {
         Ok(Box::new(Stmt::Cmd { cmd, args }))
     }
 
+    fn parse_redirects(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+        let mut stmt = self.parse_stmt()?;
+        loop {
+            match self.peek() {
+                Some(Token::RdrctOut) => {
+                    self.next();
+                    let target = self.parse_base_case()?;
+                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Out, append: false , stmt, target });
+                }
+                Some(Token::RdrctErr) => {
+                    self.next();
+                    let target = self.parse_base_case()?;
+                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Err, append: false , stmt, target }); 
+                }
+                Some(Token::RdrctBoth) => {
+                    self.next();
+                    let target = self.parse_base_case()?;
+                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Both, append: false , stmt, target }); 
+                }
+                Some(Token::AppendOut) => {
+                    self.next();
+                    let target = self.parse_base_case()?;
+                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Out, append: true , stmt, target }); 
+                }
+                Some(Token::AppendErr) => {
+                    self.next();
+                    let target = self.parse_base_case()?;
+                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Err, append: true , stmt, target });
+                }
+                Some(Token::AppendBoth) => {
+                    self.next();
+                    let target = self.parse_base_case()?;
+                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Both, append: true , stmt, target }); 
+                }
+                Some(Token::RdrctIn) => {
+                    self.next();
+                    let target = self.parse_base_case()?;
+                    stmt = Box::new(Stmt::Rdrct { op:RdrctOp::In, append: false, stmt, target });
+                }
+                _ => break,
+            }
+        }
+        Ok(stmt)
+    }
+
     fn parse_pipeline(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
-        let stmt = self.parse_stmt()?;
+        let stmt = self.parse_redirects()?;
         
         if !matches!(self.peek(), Some(Token::Pipe)) {
             return Ok(stmt);
@@ -291,7 +338,7 @@ impl<'a> Parser<'a> {
         let mut stmts = vec![*stmt];
         while let Some(Token::Pipe) = self.peek() {
             self.next();
-            stmts.push(*self.parse_stmt()?);
+            stmts.push(*self.parse_redirects()?);
         }
         Ok(Box::new(Stmt::Pipe { stmts }))
     } 
