@@ -6,6 +6,7 @@ use lexaf::{
 pub enum Stmt<'a> {
     Word(&'a str),
     Num(i64),
+    Float(f64),
     Str(&'a Vec<StrIntr<'a>>),
     Bool(bool),
     Array(Vec<Stmt<'a>>),

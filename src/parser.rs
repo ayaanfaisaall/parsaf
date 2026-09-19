@@ -114,7 +114,8 @@ impl<'a> Parser<'a> {
         match token {
             Some(Token::True)  | Some(Token::False) |
             Some(Token::Str(_))| Some(Token::LSqr)  |
-            Some(Token::LBrc)  | Some(Token::Num(_)) => {
+            Some(Token::LBrc)  | Some(Token::Num(_))|
+            Some(Token::Float(_))=> {
                 self.parse_base_case()
             }
             Some(Token::Print) => self.parse_print_stmt(),
@@ -334,6 +335,7 @@ impl<'a> Parser<'a> {
             match &st.token {
                 Token::Word(w) => Ok(Box::new(Stmt::Word(*w))),
                 Token::Num(n) => Ok(Box::new(Stmt::Num(*n))),
+                Token::Float(f) => Ok(Box::new(Stmt::Float(*f))),
                 Token::Str(s) => Ok(Box::new(Stmt::Str(s))),
                 Token::True => Ok(Box::new(Stmt::Bool(true))),
                 Token::False => Ok(Box::new(Stmt::Bool(false))),
