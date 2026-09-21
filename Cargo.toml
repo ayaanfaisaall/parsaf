@@ -12,7 +12,7 @@ name = "parsaf"
 path = "src/lib.rs"
 
 [dependencies]
-lexaf = "0.1.12"
+lexaf = "0.1.13"
 miette = { version = "7.0", features = ["fancy"] }
 thiserror = "1.0"
 

@@ -175,9 +175,9 @@ checksum = "7655c9839580ee829dfacba1d1278c2b7883e50a277ff7541299489d6bdfdc45"
 
 [[package]]
 name = "lexaf"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b03e4f9c86edc2cc8520dfbb03d904336160818429ac7847d9ba19afb3f0fce5"
+checksum = "6c161d37d4a9184f4d4a4d714501dae3007ad613b6fe17bd8eb3d8bcb0d25c75"
 dependencies = [
  "miette",
  "thiserror",
@@ -263,7 +263,7 @@ checksum = "13c45bb4a6ae1280ec0803b1ef9d3455eb50f01efbbe1447ab020f1d54fba9d8"
 
 [[package]]
 name = "parsaf"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
  "lexaf",
  "miette",
