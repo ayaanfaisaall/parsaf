@@ -2,11 +2,11 @@
 
 A recursive descent, zero-copy parser and Abstract Syntax Tree (AST) generator for `afsh` (a shell).
 
-While `lexaf` acts as the "dumb but fast" tokenizer categorizing raw text, `parsaf` is where the shell actually starts to understand the grammar. It takes the flat sequence of tokens produced by `lexaf` and structures them into a logical AST (Abstract Syntax Tree) made up of `Stmt` (Statement) nodes, ready for the interpreter to evaluate.
+While `lexaf` acts as the "dumb but fast" tokenizer categorizing raw text, `parsaf` is where the shell actually starts to understand the grammar. It takes the flat sequence of tokens produced by `lexaf` and structures them into a logical AST (Abstract Syntax Tree) made up of `SpannedStmt` nodes wrapping the `Stmt` (Statement) enum, ready for the interpreter to evaluate.
 
 ## Features
 
-* **AST Generation:** Converts a flat slice of `Token`s into a deeply nested tree of `Stmt` enums.
+* **AST Generation:** Converts a flat slice of `Token`s into a deeply nested tree of `SpannedStmt` nodes.
 * **Shell Pipelines & Logic:** Natively parses complex shell pipelines (`|`), logical chaining (`&&`, `||`), and background execution (`&`).
 * **Control Flow Constructs:** Fully supports scripting blocks like `if`/`elif`/`else`, `while` loops, and `for iter in start to end` loops.
 * **Data Structures:** Understands arrays (using `[]`), string interpolation, numbers, booleans, and scoped execution blocks (using `{}`).
@@ -52,47 +52,13 @@ fn main() {
     }
 }
 ```
-## Sample output:
-
-```rust
-[
-    Let {
-        var: "a",
-        val: Array(
-            [
-                Num(
-                    1,
-                ),
-                Num(
-                    2,
-                ),
-                Num(
-                    3,
-                ),
-            ],
-        ),
-    },
-    If {
-        cond: Bool(
-            true,
-        ),
-        block: [
-            Print {
-                val: Word(
-                    "a",
-                ),
-            },
-        ],
-        alter: None,
-    },
-]
-```
-
 ## The AST (`Stmt`)
+
+`Parser::parse()` returns `Vec<SpannedStmt>`, where each node holds a `Stmt` in `.stmt` and a `lexaf::Span` in `.span`; nested nodes use the same wrapper. Match on `node.stmt` to access the statement.
 
 `parsaf` structures your code into the `Stmt` enum. It categorizes statements into two main concepts:
 
-* **Base Cases (Values):** `Word(String)`, `Num(i64)`, `Str(Vec<StrIntr>)`, `Bool(bool)`, `Array(Vec<Stmt>)`.
+* **Base Cases (Values):** `Word(String)`, `Num(i64)`, `Str(Vec<StrIntr>)`, `Bool(bool)`, `Array(Vec<SpannedStmt>)`.
 * **Action Statements:** 
   * Commands and Arguments: `Cmd { cmd, args }`
   * Variables: `Let { var, val }`

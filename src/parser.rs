@@ -1,9 +1,9 @@
 use lexaf::{
     Token,
-    SpannedToken,
+    SpannedToken, Span,
 };
 use crate::ast::{
-    Stmt,
+    Stmt, SpannedStmt,
     RdrctOp,
 };
 use crate::error::ParsafError;
@@ -18,6 +18,18 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [SpannedToken<'a>]) -> Self {
         Parser { tokens, pos: 0 }
+    }
+
+    fn spanned(&self, start: usize, stmt: Stmt<'a>) -> Box<SpannedStmt<'a>> {
+        let consumed = &self.tokens[start..self.pos];
+        let first = consumed.first().expect("AST nodes consume at least one token");
+        let last = consumed.iter().rev().find(|token| {
+            !matches!(token.token, Token::NewLine | Token::SemiCln | Token::EOF)
+        }).unwrap_or(first);
+        Box::new(SpannedStmt {
+            stmt,
+            span: Span { start: first.span.start, end: last.span.end },
+        })
     }
 
     fn span_peek(&self) -> Option<&'a SpannedToken<'a>> {
@@ -42,7 +54,7 @@ impl<'a> Parser<'a> {
             Some(Token::NewLine) | Some(Token::SemiCln) => {
                 self.next();
             }
-            _ => {} 
+            _ => {}
         }
     }
 
@@ -60,7 +72,7 @@ impl<'a> Parser<'a> {
             } else {
                 Err(ParsafError::UnexpectedEof)
             }
-        } 
+        }
     }
 
     fn unexpected(&mut self) -> Result<(), ParsafError> {
@@ -68,7 +80,7 @@ impl<'a> Parser<'a> {
         match token {
             Some(Token::NewLine) | Some(Token::SemiCln) |
             Some(Token::RBrc)    | Some(Token::Pipe)    |
-            Some(Token::LBrc)    | Some(Token::AndAnd)  | 
+            Some(Token::LBrc)    | Some(Token::AndAnd)  |
             Some(Token::OrOr)    | Some(Token::RSqr)    |
             Some(Token::LSqr)    | Some(Token::EOF) => {
                 Ok(())
@@ -86,8 +98,8 @@ impl<'a> Parser<'a> {
             None => Err(ParsafError::UnexpectedEof),
         }
     }
-    
-    pub fn parse(&mut self) -> Result<Vec<Stmt<'a>>, ParsafError> {
+
+    pub fn parse(&mut self) -> Result<Vec<SpannedStmt<'a>>, ParsafError> {
         let mut stmts = Vec::new();
         loop {
             if let Some(token) = self.peek() {
@@ -95,7 +107,7 @@ impl<'a> Parser<'a> {
                     Token::EOF => { break; }
                     _ => {
                         let stmt = self.parse_andor()?;
-                        match *stmt {
+                        match stmt.stmt {
                             Stmt::Empty => {}
                             _ => { stmts.push(*stmt); }
                         }
@@ -108,9 +120,10 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     }
 
-    fn parse_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_stmt(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         let token = self.peek();
-        
+
         match token {
             Some(Token::True)  | Some(Token::False) |
             Some(Token::Str(_))| Some(Token::LSqr)  |
@@ -125,11 +138,11 @@ impl<'a> Parser<'a> {
             Some(Token::For) => self.parse_for_stmt(),
             Some(Token::Break) => {
                 self.next();
-                Ok(Box::new(Stmt::Break))
+                Ok(self.spanned(node_start, Stmt::Break))
             }
             Some(Token::NewLine) | Some(Token::SemiCln) => {
                 self.next();
-                Ok(Box::new(Stmt::Empty))
+                Ok(self.spanned(node_start, Stmt::Empty))
             }
             Some(Token::Pipe) | Some(Token::And)   |
             Some(Token::OrOr) | Some(Token::AndAnd)|
@@ -147,7 +160,7 @@ impl<'a> Parser<'a> {
                 self.next();
                 if let Some(st) = self.next() {
                     match &st.token {
-                        Token::Num(n) => Ok(Box::new(Stmt::Bang { num: Box::new(Stmt::Num(*n)) })),
+                        Token::Num(n) => Ok(self.spanned(node_start, Stmt::Bang { num: Box::new(SpannedStmt { stmt: Stmt::Num(*n), span: st.span.clone() }) })),
                         _ => Err(ParsafError::ExpectedFound {
                             expected: "a number".to_string(),
                             found: st.token.to_string(),
@@ -161,21 +174,23 @@ impl<'a> Parser<'a> {
             Some(Token::Word(_)) => self.parse_cmd(),
             Some(_) => {
                 self.next();
-                Ok(Box::new(Stmt::NotImplYet))
+                Ok(self.spanned(node_start, Stmt::NotImplYet))
             }
             None => Err(ParsafError::UnexpectedEof),
         }
     }
 
-    fn parse_print_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_print_stmt(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         self.next();
         let value = self.parse_base_case()?;
         self.unexpected()?;
         self.skip();
-        return Ok(Box::new(Stmt::Print { val: value }))
+        return Ok(self.spanned(node_start, Stmt::Print { val: value }))
     }
 
-    fn parse_let_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_let_stmt(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         self.next();
         let name = match self.span_peek() {
             Some(st) => match &st.token {
@@ -193,18 +208,19 @@ impl<'a> Parser<'a> {
         let value = self.parse_base_case()?;
         self.unexpected()?;
         self.skip();
-        return Ok(Box::new(Stmt::Let { var: name, val: value }))
+        return Ok(self.spanned(node_start, Stmt::Let { var: name, val: value }))
     }
-    
-    fn parse_if_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+
+    fn parse_if_stmt(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         self.next();
         let condition = self.parse_andor()?;
         self.expect(Token::LBrc)?;
         self.skip();
         let block = self.parse_block()?;
         let mut alternate = None;
-        let token = self.peek(); 
-        
+        let token = self.peek();
+
         match token {
             Some(Token::Elif) => {
                 let elif = self.parse_if_stmt()?;
@@ -212,26 +228,29 @@ impl<'a> Parser<'a> {
             }
             Some(Token::Else) => {
                 self.next();
+                let block_start = self.pos;
                 self.expect(Token::LBrc)?;
                 let block = self.parse_block()?;
-                alternate = Some(Box::new(Stmt::Block { block }));
+                alternate = Some(self.spanned(block_start, Stmt::Block { block }));
             }
             _ => {}
         }
-        
-        Ok(Box::new(Stmt::If { cond: condition, block: block, alter: alternate }))
+
+        Ok(self.spanned(node_start, Stmt::If { cond: condition, block: block, alter: alternate }))
     }
 
-    fn parse_while_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_while_stmt(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         self.next();
         let condition = self.parse_andor()?;
         self.expect(Token::LBrc)?;
         self.skip();
         let block = self.parse_block()?;
-        Ok(Box::new(Stmt::While { cond: condition, block: block }))
+        Ok(self.spanned(node_start, Stmt::While { cond: condition, block: block }))
     }
 
-    fn parse_for_stmt(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_for_stmt(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         self.next();
         let iter = match self.span_peek() {
             Some(st) => match &st.token {
@@ -252,26 +271,27 @@ impl<'a> Parser<'a> {
         self.expect(Token::LBrc)?;
         self.skip();
         let block = self.parse_block()?;
-        Ok(Box::new(Stmt::For { iter, start, end, block }))
+        Ok(self.spanned(node_start, Stmt::For { iter, start, end, block }))
     }
 
-    fn parse_cmd(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
-        let cmd = self.parse_base_case()?; 
+    fn parse_cmd(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
+        let cmd = self.parse_base_case()?;
         let mut args = Vec::new();
         while let Some(a) = self.peek() {
             match a {
-                Token::NewLine | Token::SemiCln | Token::AndAnd | Token::OrOr | 
+                Token::NewLine | Token::SemiCln | Token::AndAnd | Token::OrOr |
                 Token::RBrc    | Token::LBrc    | Token::RSqr   | Token::LSqr |
                 Token::EOF     | Token::Pipe    | Token::RdrctOut | Token::RdrctErr |
-                Token::RdrctBoth | Token::AppendOut | Token::AppendErr | Token::AppendBoth | 
+                Token::RdrctBoth | Token::AppendOut | Token::AppendErr | Token::AppendBoth |
                 Token::RdrctIn => {
                     self.skip();
                     break;
                 }
                 Token::And => {
+                    let command = self.spanned(node_start, Stmt::Cmd { cmd , args });
                     self.next();
-                    let command = Box::new(Stmt::Cmd { cmd , args });
-                    return Ok(Box::new(Stmt::And { cmd: command }))
+                    return Ok(self.spanned(node_start, Stmt::And { cmd: command }))
                 }
                 _ => {
                     let arg = self.parse_base_case()?;
@@ -280,47 +300,48 @@ impl<'a> Parser<'a> {
             }
         }
         self.skip();
-        Ok(Box::new(Stmt::Cmd { cmd, args }))
+        Ok(self.spanned(node_start, Stmt::Cmd { cmd, args }))
     }
 
-    fn parse_redirects(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_redirects(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         let mut stmt = self.parse_stmt()?;
         loop {
             match self.peek() {
                 Some(Token::RdrctOut) => {
                     self.next();
                     let target = self.parse_base_case()?;
-                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Out, append: false , stmt, target });
+                    stmt = self.spanned(node_start, Stmt::Rdrct { op: RdrctOp::Out, append: false , stmt, target });
                 }
                 Some(Token::RdrctErr) => {
                     self.next();
                     let target = self.parse_base_case()?;
-                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Err, append: false , stmt, target }); 
+                    stmt = self.spanned(node_start, Stmt::Rdrct { op: RdrctOp::Err, append: false , stmt, target });
                 }
                 Some(Token::RdrctBoth) => {
                     self.next();
                     let target = self.parse_base_case()?;
-                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Both, append: false , stmt, target }); 
+                    stmt = self.spanned(node_start, Stmt::Rdrct { op: RdrctOp::Both, append: false , stmt, target });
                 }
                 Some(Token::AppendOut) => {
                     self.next();
                     let target = self.parse_base_case()?;
-                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Out, append: true , stmt, target }); 
+                    stmt = self.spanned(node_start, Stmt::Rdrct { op: RdrctOp::Out, append: true , stmt, target });
                 }
                 Some(Token::AppendErr) => {
                     self.next();
                     let target = self.parse_base_case()?;
-                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Err, append: true , stmt, target });
+                    stmt = self.spanned(node_start, Stmt::Rdrct { op: RdrctOp::Err, append: true , stmt, target });
                 }
                 Some(Token::AppendBoth) => {
                     self.next();
                     let target = self.parse_base_case()?;
-                    stmt = Box::new(Stmt::Rdrct { op: RdrctOp::Both, append: true , stmt, target }); 
+                    stmt = self.spanned(node_start, Stmt::Rdrct { op: RdrctOp::Both, append: true , stmt, target });
                 }
                 Some(Token::RdrctIn) => {
                     self.next();
                     let target = self.parse_base_case()?;
-                    stmt = Box::new(Stmt::Rdrct { op:RdrctOp::In, append: false, stmt, target });
+                    stmt = self.spanned(node_start, Stmt::Rdrct { op:RdrctOp::In, append: false, stmt, target });
                 }
                 _ => break,
             }
@@ -328,47 +349,49 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    fn parse_pipeline(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_pipeline(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         let stmt = self.parse_redirects()?;
-        
+
         if !matches!(self.peek(), Some(Token::Pipe)) {
             return Ok(stmt);
         }
-        
+
         let mut stmts = vec![*stmt];
         while let Some(Token::Pipe) = self.peek() {
             self.next();
             stmts.push(*self.parse_redirects()?);
         }
-        Ok(Box::new(Stmt::Pipe { stmts }))
-    } 
+        Ok(self.spanned(node_start, Stmt::Pipe { stmts }))
+    }
 
-    fn parse_andor(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_andor(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         let mut stmt = self.parse_pipeline()?;
-        
+
         loop {
             match self.peek() {
                 Some(Token::AndAnd) => {
-                    self.next(); 
+                    self.next();
                     let mut stmts = vec![*stmt];
                     stmts.push(*self.parse_pipeline()?);
-                    
+
                     while let Some(Token::AndAnd) = self.peek() {
                         self.next();
                         stmts.push(*self.parse_pipeline()?);
                     }
-                    stmt = Box::new(Stmt::AndAnd { stmts });
+                    stmt = self.spanned(node_start, Stmt::AndAnd { stmts });
                 }
                 Some(Token::OrOr) => {
-                    self.next(); 
+                    self.next();
                     let mut stmts = vec![*stmt];
                     stmts.push(*self.parse_pipeline()?);
-                    
+
                     while let Some(Token::OrOr) = self.peek() {
-                        self.next(); 
+                        self.next();
                         stmts.push(*self.parse_pipeline()?);
                     }
-                    stmt = Box::new(Stmt::OrOr { stmts });
+                    stmt = self.spanned(node_start, Stmt::OrOr { stmts });
                 }
                 _ => { break; }
             }
@@ -376,17 +399,21 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    fn parse_base_case(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_base_case(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos;
         let spanned = self.next();
         if let Some(st) = spanned {
             match &st.token {
-                Token::Word(w) => Ok(Box::new(Stmt::Word(*w))),
-                Token::Num(n) => Ok(Box::new(Stmt::Num(*n))),
-                Token::Float(f) => Ok(Box::new(Stmt::Float(*f))),
-                Token::Str(s) => Ok(Box::new(Stmt::Str(s))),
-                Token::True => Ok(Box::new(Stmt::Bool(true))),
-                Token::False => Ok(Box::new(Stmt::Bool(false))),
-                Token::LBrc => Ok(Box::new(Stmt::Block { block: self.parse_block()? })),
+                Token::Word(w) => Ok(self.spanned(node_start, Stmt::Word(*w))),
+                Token::Num(n) => Ok(self.spanned(node_start, Stmt::Num(*n))),
+                Token::Float(f) => Ok(self.spanned(node_start, Stmt::Float(*f))),
+                Token::Str(s) => Ok(self.spanned(node_start, Stmt::Str(s))),
+                Token::True => Ok(self.spanned(node_start, Stmt::Bool(true))),
+                Token::False => Ok(self.spanned(node_start, Stmt::Bool(false))),
+                Token::LBrc => {
+                    let block = self.parse_block()?;
+                    Ok(self.spanned(node_start, Stmt::Block { block }))
+                },
                 Token::LSqr => self.parse_arrays(),
                 _ => Err(ParsafError::BaseCase {
                     token: st.token.to_string(),
@@ -398,7 +425,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_block(&mut self) -> Result<Vec<Stmt<'a>>, ParsafError> {
+    fn parse_block(&mut self) -> Result<Vec<SpannedStmt<'a>>, ParsafError> {
         let mut stmts = Vec::new();
         loop {
             if let Some(token) = self.peek() {
@@ -429,7 +456,7 @@ impl<'a> Parser<'a> {
                     }
                     _ => {
                         let stmt = self.parse_andor()?;
-                        match *stmt {
+                        match stmt.stmt {
                             Stmt::Empty => {}
                             _ => stmts.push(*stmt),
                         }
@@ -440,9 +467,10 @@ impl<'a> Parser<'a> {
             }
         }
         Ok(stmts)
-    } 
+    }
 
-    fn parse_arrays(&mut self) -> Result<Box<Stmt<'a>>, ParsafError> {
+    fn parse_arrays(&mut self) -> Result<Box<SpannedStmt<'a>>, ParsafError> {
+        let node_start = self.pos - 1;
         let mut stmts = Vec::new();
         loop {
             let token = self.peek();
@@ -480,6 +508,6 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        Ok(Box::new(Stmt::Array(stmts)))
+        Ok(self.spanned(node_start, Stmt::Array(stmts)))
     }
 }

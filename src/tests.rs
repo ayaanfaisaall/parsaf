@@ -1,11 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use parsaf::{
-        Stmt,
-        Parser
-    };
-    use lexaf::{Lexer};
+    use lexaf::Lexer;
     use lexaf::tokens::StrIntr;
+    use parsaf::{Parser, Span, SpannedStmt, Stmt};
 
     #[test]
     fn test_variable_declaration() {
@@ -16,12 +13,16 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::Let {
+            vec![SpannedStmt {
+                stmt: Stmt::Let {
                     var: "n1",
-                    val: Box::new(Stmt::Num(43)),
-                }
-            ]
+                    val: Box::new(SpannedStmt {
+                        stmt: Stmt::Num(43),
+                        span: Span { start: 9, end: 11 }
+                    }),
+                },
+                span: Span { start: 0, end: 11 }
+            }]
         );
     }
 
@@ -34,15 +35,25 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::Cmd {
-                    cmd: Box::new(Stmt::Word("git")),
+            vec![SpannedStmt {
+                stmt: Stmt::Cmd {
+                    cmd: Box::new(SpannedStmt {
+                        stmt: Stmt::Word("git"),
+                        span: Span { start: 0, end: 3 }
+                    }),
                     args: vec![
-                        Stmt::Word("add"),
-                        Stmt::Word("."),
+                        SpannedStmt {
+                            stmt: Stmt::Word("add"),
+                            span: Span { start: 4, end: 7 }
+                        },
+                        SpannedStmt {
+                            stmt: Stmt::Word("."),
+                            span: Span { start: 8, end: 9 }
+                        },
                     ],
-                }
-            ]
+                },
+                span: Span { start: 0, end: 9 }
+            }]
         );
     }
 
@@ -55,20 +66,39 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::Pipe {
+            vec![SpannedStmt {
+                stmt: Stmt::Pipe {
                     stmts: vec![
-                        Stmt::Cmd {
-                            cmd: Box::new(Stmt::Word("cat")),
-                            args: vec![Stmt::Word("~/Downloads/abc/dc.jpg")],
+                        SpannedStmt {
+                            stmt: Stmt::Cmd {
+                                cmd: Box::new(SpannedStmt {
+                                    stmt: Stmt::Word("cat"),
+                                    span: Span { start: 0, end: 3 }
+                                }),
+                                args: vec![SpannedStmt {
+                                    stmt: Stmt::Word("~/Downloads/abc/dc.jpg"),
+                                    span: Span { start: 4, end: 26 }
+                                }],
+                            },
+                            span: Span { start: 0, end: 26 }
                         },
-                        Stmt::Cmd {
-                            cmd: Box::new(Stmt::Word("grep")),
-                            args: vec![Stmt::Word("abc")],
+                        SpannedStmt {
+                            stmt: Stmt::Cmd {
+                                cmd: Box::new(SpannedStmt {
+                                    stmt: Stmt::Word("grep"),
+                                    span: Span { start: 29, end: 33 }
+                                }),
+                                args: vec![SpannedStmt {
+                                    stmt: Stmt::Word("abc"),
+                                    span: Span { start: 34, end: 37 }
+                                }],
+                            },
+                            span: Span { start: 29, end: 37 }
                         }
                     ],
-                }
-            ]
+                },
+                span: Span { start: 0, end: 37 }
+            }]
         );
     }
 
@@ -81,14 +111,24 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::For {
+            vec![SpannedStmt {
+                stmt: Stmt::For {
                     iter: "i",
-                    start: Box::new(Stmt::Num(0)),
-                    end: Box::new(Stmt::Num(10)),
-                    block: vec![Stmt::Break],
-                }
-            ]
+                    start: Box::new(SpannedStmt {
+                        stmt: Stmt::Num(0),
+                        span: Span { start: 9, end: 10 }
+                    }),
+                    end: Box::new(SpannedStmt {
+                        stmt: Stmt::Num(10),
+                        span: Span { start: 14, end: 16 }
+                    }),
+                    block: vec![SpannedStmt {
+                        stmt: Stmt::Break,
+                        span: Span { start: 19, end: 24 }
+                    }],
+                },
+                span: Span { start: 0, end: 26 }
+            }]
         );
     }
 
@@ -102,13 +142,28 @@ mod tests {
         assert_eq!(
             ast,
             vec![
-                Stmt::While {
-                    cond: Box::new(Stmt::Bool(true)),
-                    block: vec![Stmt::Break],
+                SpannedStmt {
+                    stmt: Stmt::While {
+                        cond: Box::new(SpannedStmt {
+                            stmt: Stmt::Bool(true),
+                            span: Span { start: 6, end: 10 }
+                        }),
+                        block: vec![SpannedStmt {
+                            stmt: Stmt::Break,
+                            span: Span { start: 13, end: 18 }
+                        }],
+                    },
+                    span: Span { start: 0, end: 20 }
                 },
-                Stmt::While {
-                    cond: Box::new(Stmt::Bool(false)),
-                    block: vec![],
+                SpannedStmt {
+                    stmt: Stmt::While {
+                        cond: Box::new(SpannedStmt {
+                            stmt: Stmt::Bool(false),
+                            span: Span { start: 27, end: 32 }
+                        }),
+                        block: vec![],
+                    },
+                    span: Span { start: 21, end: 36 }
                 }
             ]
         );
@@ -116,38 +171,64 @@ mod tests {
 
     #[test]
     fn test_if_elif_else_flow() {
-        let input = "if true { print \"yes\" } elif false { print \"no\" } else { print \"maybe\" }";
+        let input =
+            "if true { print \"yes\" } elif false { print \"no\" } else { print \"maybe\" }";
         let tokens = Lexer::new(input).tokenize().unwrap();
         let mut parser = Parser::new(&tokens);
         let ast = parser.parse().unwrap();
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::If {
-                    cond: Box::new(Stmt::Bool(true)),
-                    block: vec![
-                        Stmt::Print {
-                            val: Box::new(Stmt::Str(&vec![StrIntr::Literal("yes")])),
-                        }
-                    ],
-                    alter: Some(Box::new(Stmt::If {
-                        cond: Box::new(Stmt::Bool(false)),
-                        block: vec![
-                            Stmt::Print {
-                                val: Box::new(Stmt::Str(&vec![StrIntr::Literal("no")])),
-                            }
-                        ],
-                        alter: Some(Box::new(Stmt::Block {
-                            block: vec![
-                                Stmt::Print {
-                                    val: Box::new(Stmt::Str(&vec![StrIntr::Literal("maybe")])),
-                                }
-                            ]
-                        })),
+            vec![SpannedStmt {
+                stmt: Stmt::If {
+                    cond: Box::new(SpannedStmt {
+                        stmt: Stmt::Bool(true),
+                        span: Span { start: 3, end: 7 }
+                    }),
+                    block: vec![SpannedStmt {
+                        stmt: Stmt::Print {
+                            val: Box::new(SpannedStmt {
+                                stmt: Stmt::Str(&vec![StrIntr::Literal("yes")]),
+                                span: Span { start: 16, end: 21 }
+                            }),
+                        },
+                        span: Span { start: 10, end: 21 }
+                    }],
+                    alter: Some(Box::new(SpannedStmt {
+                        stmt: Stmt::If {
+                            cond: Box::new(SpannedStmt {
+                                stmt: Stmt::Bool(false),
+                                span: Span { start: 29, end: 34 }
+                            }),
+                            block: vec![SpannedStmt {
+                                stmt: Stmt::Print {
+                                    val: Box::new(SpannedStmt {
+                                        stmt: Stmt::Str(&vec![StrIntr::Literal("no")]),
+                                        span: Span { start: 43, end: 47 }
+                                    }),
+                                },
+                                span: Span { start: 37, end: 47 }
+                            }],
+                            alter: Some(Box::new(SpannedStmt {
+                                stmt: Stmt::Block {
+                                    block: vec![SpannedStmt {
+                                        stmt: Stmt::Print {
+                                            val: Box::new(SpannedStmt {
+                                                stmt: Stmt::Str(&vec![StrIntr::Literal("maybe")]),
+                                                span: Span { start: 63, end: 70 }
+                                            }),
+                                        },
+                                        span: Span { start: 57, end: 70 }
+                                    }]
+                                },
+                                span: Span { start: 55, end: 72 }
+                            })),
+                        },
+                        span: Span { start: 24, end: 72 }
                     })),
-                }
-            ]
+                },
+                span: Span { start: 0, end: 72 }
+            }]
         );
     }
 
@@ -160,28 +241,50 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::OrOr {
+            vec![SpannedStmt {
+                stmt: Stmt::OrOr {
                     stmts: vec![
-                        Stmt::AndAnd {
-                            stmts: vec![
-                                Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word("cmd1")),
-                                    args: vec![],
-                                },
-                                Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word("cmd2")),
-                                    args: vec![],
-                                }
-                            ]
+                        SpannedStmt {
+                            stmt: Stmt::AndAnd {
+                                stmts: vec![
+                                    SpannedStmt {
+                                        stmt: Stmt::Cmd {
+                                            cmd: Box::new(SpannedStmt {
+                                                stmt: Stmt::Word("cmd1"),
+                                                span: Span { start: 0, end: 4 }
+                                            }),
+                                            args: vec![],
+                                        },
+                                        span: Span { start: 0, end: 4 }
+                                    },
+                                    SpannedStmt {
+                                        stmt: Stmt::Cmd {
+                                            cmd: Box::new(SpannedStmt {
+                                                stmt: Stmt::Word("cmd2"),
+                                                span: Span { start: 8, end: 12 }
+                                            }),
+                                            args: vec![],
+                                        },
+                                        span: Span { start: 8, end: 12 }
+                                    }
+                                ]
+                            },
+                            span: Span { start: 0, end: 12 }
                         },
-                        Stmt::Cmd {
-                            cmd: Box::new(Stmt::Word("cmd3")),
-                            args: vec![],
+                        SpannedStmt {
+                            stmt: Stmt::Cmd {
+                                cmd: Box::new(SpannedStmt {
+                                    stmt: Stmt::Word("cmd3"),
+                                    span: Span { start: 16, end: 20 }
+                                }),
+                                args: vec![],
+                            },
+                            span: Span { start: 16, end: 20 }
                         }
                     ]
-                }
-            ]
+                },
+                span: Span { start: 0, end: 20 }
+            }]
         );
     }
 
@@ -194,21 +297,40 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::AndAnd {
+            vec![SpannedStmt {
+                stmt: Stmt::AndAnd {
                     stmts: vec![
-                        Stmt::Bang {
-                            num: Box::new(Stmt::Num(38)),
+                        SpannedStmt {
+                            stmt: Stmt::Bang {
+                                num: Box::new(SpannedStmt {
+                                    stmt: Stmt::Num(38),
+                                    span: Span { start: 1, end: 3 }
+                                }),
+                            },
+                            span: Span { start: 0, end: 3 }
                         },
-                        Stmt::And {
-                            cmd: Box::new(Stmt::Cmd {
-                                cmd: Box::new(Stmt::Word("server")),
-                                args: vec![Stmt::Word("start")],
-                            }),
+                        SpannedStmt {
+                            stmt: Stmt::And {
+                                cmd: Box::new(SpannedStmt {
+                                    stmt: Stmt::Cmd {
+                                        cmd: Box::new(SpannedStmt {
+                                            stmt: Stmt::Word("server"),
+                                            span: Span { start: 7, end: 13 }
+                                        }),
+                                        args: vec![SpannedStmt {
+                                            stmt: Stmt::Word("start"),
+                                            span: Span { start: 14, end: 19 }
+                                        }],
+                                    },
+                                    span: Span { start: 7, end: 19 }
+                                }),
+                            },
+                            span: Span { start: 7, end: 21 }
                         }
                     ]
-                }
-            ]
+                },
+                span: Span { start: 0, end: 21 }
+            }]
         );
     }
 
@@ -221,27 +343,45 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::If {
-                    cond: Box::new(Stmt::Let {
-                        var: "a",
-                        val: Box::new(Stmt::Block {
-                            block: vec![
-                                Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word("cat")),
-                                    args: vec![Stmt::Word("main.rs")],
-                                }
-                            ]
-                        })
+            vec![SpannedStmt {
+                stmt: Stmt::If {
+                    cond: Box::new(SpannedStmt {
+                        stmt: Stmt::Let {
+                            var: "a",
+                            val: Box::new(SpannedStmt {
+                                stmt: Stmt::Block {
+                                    block: vec![SpannedStmt {
+                                        stmt: Stmt::Cmd {
+                                            cmd: Box::new(SpannedStmt {
+                                                stmt: Stmt::Word("cat"),
+                                                span: Span { start: 13, end: 16 }
+                                            }),
+                                            args: vec![SpannedStmt {
+                                                stmt: Stmt::Word("main.rs"),
+                                                span: Span { start: 17, end: 24 }
+                                            }],
+                                        },
+                                        span: Span { start: 13, end: 24 }
+                                    }]
+                                },
+                                span: Span { start: 11, end: 26 }
+                            })
+                        },
+                        span: Span { start: 3, end: 26 }
                     }),
-                    block: vec![
-                        Stmt::Print {
-                            val: Box::new(Stmt::Word("a")),
-                        }
-                    ],
+                    block: vec![SpannedStmt {
+                        stmt: Stmt::Print {
+                            val: Box::new(SpannedStmt {
+                                stmt: Stmt::Word("a"),
+                                span: Span { start: 35, end: 36 }
+                            }),
+                        },
+                        span: Span { start: 29, end: 36 }
+                    }],
                     alter: None,
-                }
-            ]
+                },
+                span: Span { start: 0, end: 38 }
+            }]
         );
     }
 
@@ -254,52 +394,105 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::AndAnd {
+            vec![SpannedStmt {
+                stmt: Stmt::AndAnd {
                     stmts: vec![
-                        Stmt::OrOr {
-                            stmts: vec![
-                                Stmt::AndAnd {
-                                    stmts: vec![
-                                        Stmt::Let {
-                                            var: "a",
-                                            val: Box::new(Stmt::Num(3)),
+                        SpannedStmt {
+                            stmt: Stmt::OrOr {
+                                stmts: vec![
+                                    SpannedStmt {
+                                        stmt: Stmt::AndAnd {
+                                            stmts: vec![
+                                                SpannedStmt {
+                                                    stmt: Stmt::Let {
+                                                        var: "a",
+                                                        val: Box::new(SpannedStmt {
+                                                            stmt: Stmt::Num(3),
+                                                            span: Span { start: 8, end: 9 }
+                                                        }),
+                                                    },
+                                                    span: Span { start: 0, end: 9 }
+                                                },
+                                                SpannedStmt {
+                                                    stmt: Stmt::Print {
+                                                        val: Box::new(SpannedStmt {
+                                                            stmt: Stmt::Word("a"),
+                                                            span: Span { start: 19, end: 20 }
+                                                        }),
+                                                    },
+                                                    span: Span { start: 13, end: 20 }
+                                                },
+                                            ],
                                         },
-                                        Stmt::Print {
-                                            val: Box::new(Stmt::Word("a")),
+                                        span: Span { start: 0, end: 20 }
+                                    },
+                                    SpannedStmt {
+                                        stmt: Stmt::Cmd {
+                                            cmd: Box::new(SpannedStmt {
+                                                stmt: Stmt::Word("test"),
+                                                span: Span { start: 24, end: 28 }
+                                            }),
+                                            args: vec![
+                                                SpannedStmt {
+                                                    stmt: Stmt::Str(&vec![StrIntr::Variable("a"),]),
+                                                    span: Span { start: 29, end: 34 }
+                                                },
+                                                SpannedStmt {
+                                                    stmt: Stmt::Word("-eq"),
+                                                    span: Span { start: 35, end: 38 }
+                                                },
+                                                SpannedStmt {
+                                                    stmt: Stmt::Num(8),
+                                                    span: Span { start: 39, end: 40 }
+                                                },
+                                            ],
                                         },
-                                    ],
-                                },
-                                Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word("test")),
-                                    args: vec![
-                                        Stmt::Str(&vec![
-                                            StrIntr::Variable("a"),
-                                        ]),
-                                        Stmt::Word("-eq"),
-                                        Stmt::Num(8),
-                                    ],
-                                },
-                            ],
+                                        span: Span { start: 24, end: 40 }
+                                    },
+                                ],
+                            },
+                            span: Span { start: 0, end: 40 }
                         },
-                        Stmt::Pipe {
-                            stmts: vec![
-                                Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word("history")),
-                                    args: vec![],
-                                },
-                                Stmt::Cmd {
-                                    cmd: Box::new(Stmt::Word("grep")),
-                                    args: vec![
-                                        Stmt::Word("-i"),
-                                        Stmt::Word("fd"),
-                                    ],
-                                },
-                            ],
+                        SpannedStmt {
+                            stmt: Stmt::Pipe {
+                                stmts: vec![
+                                    SpannedStmt {
+                                        stmt: Stmt::Cmd {
+                                            cmd: Box::new(SpannedStmt {
+                                                stmt: Stmt::Word("history"),
+                                                span: Span { start: 44, end: 51 }
+                                            }),
+                                            args: vec![],
+                                        },
+                                        span: Span { start: 44, end: 51 }
+                                    },
+                                    SpannedStmt {
+                                        stmt: Stmt::Cmd {
+                                            cmd: Box::new(SpannedStmt {
+                                                stmt: Stmt::Word("grep"),
+                                                span: Span { start: 54, end: 58 }
+                                            }),
+                                            args: vec![
+                                                SpannedStmt {
+                                                    stmt: Stmt::Word("-i"),
+                                                    span: Span { start: 59, end: 61 }
+                                                },
+                                                SpannedStmt {
+                                                    stmt: Stmt::Word("fd"),
+                                                    span: Span { start: 62, end: 64 }
+                                                },
+                                            ],
+                                        },
+                                        span: Span { start: 54, end: 64 }
+                                    },
+                                ],
+                            },
+                            span: Span { start: 44, end: 64 }
                         },
                     ],
-                }
-            ]
+                },
+                span: Span { start: 0, end: 64 }
+            }]
         );
     }
 
@@ -312,13 +505,23 @@ mod tests {
 
         assert_eq!(
             ast,
-            vec![
-                Stmt::Array(vec![
-                    Stmt::Num(1),
-                    Stmt::Num(2),
-                    Stmt::Num(3),
-                ])
-            ]
+            vec![SpannedStmt {
+                stmt: Stmt::Array(vec![
+                    SpannedStmt {
+                        stmt: Stmt::Num(1),
+                        span: Span { start: 1, end: 2 }
+                    },
+                    SpannedStmt {
+                        stmt: Stmt::Num(2),
+                        span: Span { start: 4, end: 5 }
+                    },
+                    SpannedStmt {
+                        stmt: Stmt::Num(3),
+                        span: Span { start: 7, end: 8 }
+                    },
+                ]),
+                span: Span { start: 0, end: 9 }
+            }]
         );
     }
 }

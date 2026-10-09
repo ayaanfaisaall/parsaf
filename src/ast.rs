@@ -1,5 +1,5 @@
 use lexaf::{
-    StrIntr,
+    StrIntr, Span,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -17,58 +17,65 @@ pub enum Stmt<'a> {
     Float(f64),
     Str(&'a Vec<StrIntr<'a>>),
     Bool(bool),
-    Array(Vec<Stmt<'a>>),
+    Array(Vec<SpannedStmt<'a>>),
     Cmd {
-        cmd: Box<Stmt<'a>>,
-        args: Vec<Stmt<'a>>,
+        cmd: Box<SpannedStmt<'a>>,
+        args: Vec<SpannedStmt<'a>>,
     },
     Let {
         var: &'a str,
-        val: Box<Stmt<'a>>,
-    }, 
+        val: Box<SpannedStmt<'a>>,
+    },
     Print {
-        val: Box<Stmt<'a>>,
+        val: Box<SpannedStmt<'a>>,
     },
     If {
-        cond: Box<Stmt<'a>>,
-        block: Vec<Stmt<'a>>,
-        alter: Option<Box<Stmt<'a>>>, 
+        cond: Box<SpannedStmt<'a>>,
+        block: Vec<SpannedStmt<'a>>,
+        alter: Option<Box<SpannedStmt<'a>>>,
     },
     For {
         iter: &'a str,
-        start: Box<Stmt<'a>>,
-        end: Box<Stmt<'a>>,
-        block: Vec<Stmt<'a>>,
+        start: Box<SpannedStmt<'a>>,
+        end: Box<SpannedStmt<'a>>,
+        block: Vec<SpannedStmt<'a>>,
     },
     While {
-        cond: Box<Stmt<'a>>,
-        block: Vec<Stmt<'a>>,
+        cond: Box<SpannedStmt<'a>>,
+        block: Vec<SpannedStmt<'a>>,
     },
     Block {
-        block: Vec<Stmt<'a>>,
+        block: Vec<SpannedStmt<'a>>,
     },
     Rdrct {
         op: RdrctOp,
         append: bool,
-        stmt: Box<Stmt<'a>>,
-        target: Box<Stmt<'a>>,
+        stmt: Box<SpannedStmt<'a>>,
+        target: Box<SpannedStmt<'a>>,
     },
     Pipe {
-        stmts: Vec<Stmt<'a>>,
+        stmts: Vec<SpannedStmt<'a>>,
     },
     AndAnd {
-        stmts: Vec<Stmt<'a>>,
+        stmts: Vec<SpannedStmt<'a>>,
     },
     OrOr {
-        stmts: Vec<Stmt<'a>>,
+        stmts: Vec<SpannedStmt<'a>>,
     },
     And {
-        cmd: Box<Stmt<'a>>,
+        cmd: Box<SpannedStmt<'a>>,
     },
     Bang {
-        num: Box<Stmt<'a>>,
+        num: Box<SpannedStmt<'a>>,
     },
     Break,
     Empty,
     NotImplYet,
+}
+
+/// A statement with its half-open UTF-8 byte range in the source.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpannedStmt<'a> {
+    pub stmt: Stmt<'a>,
+    pub span: Span,
 }
